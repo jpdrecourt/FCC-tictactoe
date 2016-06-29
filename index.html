@@ -12,7 +12,7 @@
 
 <body>
   <!-- Start of Tic Tac Toe HTML -->
-  <svg id="circle0" width="200" height="200" viewbox="-1.5 -1.5 3 3">
+  <svg id="circle0" width="600" height="600" viewbox="-4.5 -4.5 9 9">
     <filter id="chalkTexture">
       <feTurbulence result="TURBULENCE" type="fractalNoise" baseFrequency="0.05" numOctaves="2" seed="2" />
       <feDisplacementMap in="SourceGraphic" in2="TURBULENCE" scale="5" result="raggedContour" />
@@ -24,9 +24,8 @@
       0.3333 0.3333 0.3333 1 0" />
      <feComposite in="alphaMask" in2="raggedContour" result="chalkPattern" operator="in" />
     </filter>
-    <rect width="3" height="3" x="-1.5" y="-1.5" stroke="white" stroke-width="0.01"/>
+    <rect width="9" height="9" x="-4.5" y="-4.5" stroke="red" stroke-width="0.01"/>
   </svg>
-
 
 
 

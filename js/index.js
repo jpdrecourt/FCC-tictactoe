@@ -76,8 +76,6 @@ $(document).ready(function() {
     angle2 = -30 - 30*Math.random();
   // Circle
   svg.append('path')
-    .attr('width', 3)
-    .attr('height', 3)
     .attr('fill', 'none')
     .attr('stroke', 'white')
     .attr('stroke-width', '0.1')
@@ -87,8 +85,6 @@ $(document).ready(function() {
       return scaleAtAngle(0.9, Math.PI*Math.random());})
     .attr('filter', 'url(#chalkTexture)');
   svg.append('path')
-    .attr('width', 3)
-    .attr('height', 3)
     .attr('fill', 'none')
     .attr('stroke', 'white')
     .attr('stroke-width', '0.1')
@@ -98,8 +94,6 @@ $(document).ready(function() {
     .attr('transform', 'rotate(' + angle1 + ') scale(1.414)')
     .attr('filter', 'url(#chalkTexture)');
   svg.append('path')
-    .attr('width', 3)
-    .attr('height', 3)
     .attr('fill', 'none')
     .attr('stroke', 'white')
     .attr('stroke-width', '0.1')
@@ -108,4 +102,16 @@ $(document).ready(function() {
                           rndSign() * (0.1 + 0.1 * Math.random()));})
     .attr('transform', 'rotate(' + angle2 + ') scale(1.414)')
     .attr('filter', 'url(#chalkTexture)');
+  // Horizontal game lines
+  for (let i=0; i < 4; i++) {
+    svg.append('path')
+      .attr('fill', 'none')
+      .attr('stroke', 'white')
+      .attr('stroke-width', '0.2')
+      .attr('d', function(){
+        return imperfectLine(rndSign() * (0.1 + 0.1 * Math.random()) ,
+                            rndSign() * (0.1 + 0.1 * Math.random()));})
+      .attr('transform', 'rotate(' + (i < 2 ? 0 : 90) + ') translate(0,' + (i % 2 ? 1.5 : -1.5) + ') scale(4.5, 1)')
+      .attr('filter', 'url(#chalkTexture)');
+  }
 });
