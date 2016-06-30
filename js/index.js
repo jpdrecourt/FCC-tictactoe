@@ -1,6 +1,6 @@
 // Start of Tic Tac Toe JS
-
 'use strict';
+
 /* Imperfect circle using 4 cubic Bezier curves
 Inspired by http://bl.ocks.org/patricksurry/11087975
 Constructor parameter:
@@ -133,37 +133,52 @@ class ImperfectLinePath {
   }
 }
 
-function chalkify(path) {
-  path.attr('filter', 'url(#chalkTexture)')
+class TicTacToe {
+  constructor(params) {
+    this._board = [];
+    this._svg = d3.select('#board');
+    this._initGame();
+
+    this._svg.on('click', () => {
+      console.log(d3.mouse(this._svg.node()));
+    });
+
+  }
+
+  _initGame() {
+    this._eraseBoard();
+    this._displayGrid();
+  }
+
+  _eraseBoard() {
+
+  }
+
+  _displayGrid() {
+    this._board[0] = new ImperfectLinePath(-4.5, 1.5, 4.5, 1.5);
+    this._board[1] = new ImperfectLinePath(-4.5, -1.5, 4.5, -1.5);
+    this._board[2] = new ImperfectLinePath(-1.5, 4.5, -1.5, -4.5);
+    this._board[3] = new ImperfectLinePath(1.5, 4.5, 1.5, -4.5);
+    this._svg.append('rect')
+      .attr('x', -4.5)
+      .attr('y', -4.5)
+      .attr('width', 9)
+      .attr('height', 9)
+      .attr('fill', 'none')
+      .attr('stroke', 'red')
+      .attr('stroke-width', 0.01);
+    for (let i = 0; i < this._board.length; i++) {
+      this._chalkify(this._board[i].addPathToSvg(this._svg));
+    }
+  }
+
+  _chalkify(path) {
+    path.attr('filter', 'url(#chalkTexture)')
     .attr('fill', 'none')
     .attr('stroke', 'white')
     .attr('stroke-width', '0.1');
-  return path;
+    return path;
+  }
 }
 
-
-document.addEventListener("DOMContentLoaded", function(e) {
-  let svg = d3.select("#circle0"),
-    angle1 = 30 + 30 * Math.random(),
-    angle2 = -30 - 30 * Math.random(),
-    c1 = new ImperfectCirclePath(),
-    c2 = new ImperfectCirclePath(3,3),
-    cross1 = new ImperfectLinePath(-1, 1, 1, -1),
-    cross2 = new ImperfectLinePath(1, 1, -1, -1),
-    line1 = new ImperfectLinePath(-4.5, 1.5, 4.5, 1.5),
-    line2 = new ImperfectLinePath(-4.5, -1.5, 4.5, -1.5),
-    line3 = new ImperfectLinePath(-1.5, 4.5, -1.5, -4.5),
-    line4 = new ImperfectLinePath(1.5, 4.5, 1.5, -4.5);
-
-  // Circle
-  chalkify(c1.addPathToSvg(svg));
-  chalkify(c2.addPathToSvg(svg));
-  // Line
-  chalkify(cross1.addPathToSvg(svg));
-  chalkify(cross2.addPathToSvg(svg));
-  // Game lines
-  chalkify(line1.addPathToSvg(svg));
-  chalkify(line2.addPathToSvg(svg));
-  chalkify(line3.addPathToSvg(svg));
-  chalkify(line4.addPathToSvg(svg));
-});
+let app = new TicTacToe();
