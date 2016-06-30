@@ -25,22 +25,23 @@ class ImperfectCirclePath {
   get r() {return this._y;}
   get path() {return this._path;}
 
-  /* Appends the path to a d3 svg selection and returns the path */
+  /* Appends the path to a d3 svg selector an returns that path*/
   addPathToSvg(svg) {
     if (this._path !== undefined) {
       throw("Error: Path already added to an svg");
     }
     this._path = svg.append('path')
-      .attr('d', this._imperfectCirclePath(this._dR, this._thetaStart, this._dTheta))
-      .attr('transform', this._scaleAtAngle(this._ratio, this._angle) +  `translate(${this._x}, ${this._y})`);
+      .attr('d', this._imperfectCirclePath())
+      .attr('transform', this._transformPath());
+    return this._path;
   }
 
-  _imperfectCirclePath(dR, thetaStart, dTheta) {
+  _imperfectCirclePath() {
     const c = 0.551915024494,
       beta = Math.atan(c),
       d = Math.sqrt(c * c + 1 * 1);
     let r = 1,
-      theta = thetaStart,
+      theta = this._thetaStart,
       path = 'M',
       randomFn = Math.random;
 
@@ -52,9 +53,9 @@ class ImperfectCirclePath {
     // For each quarter turn
     for (let i = 0; i < 4; i++) {
       // Angle overshoot/undershoot
-      theta += Math.PI / 2 * (1 + randomFn() * dTheta);
+      theta += Math.PI / 2 * (1 + randomFn() * this._dTheta);
       // Radius overshoot/undershoot
-      r *= (1 + randomFn() * dR);
+      r *= (1 + randomFn() * this._dR);
       // Control point P2
       path += ' ' + (i ? 'S' : '') + [d * r * Math.sin(theta - beta),
         d * r * Math.cos(theta - beta)
@@ -65,81 +66,79 @@ class ImperfectCirclePath {
     return path;
   }
 
-  _scaleAtAngle(ratio, angle) {
-    angle *= 180 / Math.PI;
-    return 'rotate(' + angle + ') ' +
-      'scale(1, ' + ratio + ') ' +
-      'rotate(' + (-angle) + ')';
+  _transformPath() {
+    let angle = this._angle * 180 / Math.PI;
+    return `translate(${this._x}, ${this._y}) rotate(${angle}) scale(1, ${this._ratio}) rotate(-${angle})`;
   }
 }
 
-/* Imperfect circle of base radius 1 using 4 cubic Bezier curves.
-From http://bl.ocks.org/patricksurry/11087975
-Parameters:
-dR: The maximum multiplying factor for the radius per quarter turn
-thetaStart: The angle where the drawing starts
-dTheta: The maximum overshoot/undershoot angle per quarter turn (in radians)
-Returns:
-The d attribute of an SVG path
+/* Imperfect line using a cubic bezier curves
+Constructor parameter:
+ x0, y0: Coordinates of the origin (default to [0, 0])
+ x0, y0: Coordinates of the end (default to [1, 0])
 */
-function imperfectCirclePathFn(dR, thetaStart, dTheta) {
-  const c = 0.551915024494,
-    beta = Math.atan(c),
-    d = Math.sqrt(c * c + 1 * 1);
-  let r = 1,
-    theta = thetaStart,
-    path = 'M',
-    randomFn = Math.random;
-
-  // Move to P0
-  path += [r * Math.sin(theta), r * Math.cos(theta)];
-  // Control point P1
-  path += ' C' + [d * r * Math.sin(theta + beta), d * r * Math.cos(theta + beta)];
-
-  // For each quarter turn
-  for (let i = 0; i < 4; i++) {
-    // Angle overshoot/undershoot
-    theta += Math.PI / 2 * (1 + randomFn() * dTheta);
-    // Radius overshoot/undershoot
-    r *= (1 + randomFn() * dR);
-    // Control point P2
-    path += ' ' + (i ? 'S' : '') + [d * r * Math.sin(theta - beta),
-      d * r * Math.cos(theta - beta)
-    ];
-    // Control point P3
-    path += ' ' + [r * Math.sin(theta), r * Math.cos(theta)];
+class ImperfectLinePath {
+  // TODO Animation
+  constructor (x0=0, y0=0, x1=1, y1=0) {
+    this._x0 = x0;
+    this._y0 = y0;
+    this._x1 = x1;
+    this._y1 = y1;
+    this._startAngle = 0.1 + this._rndSign() * 0.1 * Math.random();
+    this._endAngle = 0.1 + this._rndSign() * 0.1 * Math.random();
+    this._xMid = -0.2 + 0.2 * Math.random();
+    this._path = undefined;
   }
+
+  get x0() {return this._x0;}
+  get y0() {return this._y0;}
+  get x1() {return this._x1;}
+  get y1() {return this._y1;}
+  get path() {return this._path;}
+
+  /* Appends the path to a d3 svg selector and returns the path */
+  addPathToSvg(svg) {
+    if (this._path !== undefined) {
+      throw("Error: Path already added to an svg");
+    }
+    this._path = svg.append('path')
+      .attr('d', this._imperfectLine())
+      .attr('transform', this._transformPath());
+    return this._path;
+  }
+
+  /* Imperfect horizontal line from [-1,0] to [1,0]
+  Parameters: start and end angles in radians
+  Return: d attribute of SVG path */
+  _imperfectLine() {
+    let path = 'M-1,0 C'; // The line starts at [-1, 0]
+    // Control point P1
+    path += [this._xMid, (1 + this._xMid) * Math.tan(this._startAngle)];
+    // Control point P2
+    path += ' ' + [this._xMid, (1 - this._xMid) * Math.tan(this._endAngle)];
+    // Control point P3
+    path += ' ' + [1, 0];
+    return path;
+  }
+
+  _transformPath() {
+    let length = Math.sqrt((this._x0 - this._x1) * (this._x0 - this._x1) + (this._y0 - this._y1) * (this._y0 - this._y1)),
+      angle = Math.acos((this._x1 - this._x0) / length) * 180 / Math.PI;
+    return ` translate (${0.5 * (this._x0 + this._x1)}, ${0.5 * (this._y0 + this._y1)}) rotate (${angle}) scale(${length / 2}, 1)`;
+  }
+
+  /* Return a positive or a negative sign */
+  _rndSign () {
+    return Math.random() < 0.5 ? -1 : 1;
+  }
+}
+
+function chalkify(path) {
+  path.attr('filter', 'url(#chalkTexture)')
+    .attr('fill', 'none')
+    .attr('stroke', 'white')
+    .attr('stroke-width', '0.1');
   return path;
-}
-
-/* Imperfect horizontal line from [-1,0] to [1,0]
-Parameters: start and end angles in radians
-Return: d attribute of SVG path */
-function imperfectLine(startAngle, endAngle) {
-  let xMid = -0.2 + 0.4 * Math.random(),
-    path = 'M-1,0 C'; // The line starts at (0, 0)
-
-  // Control point P1
-  path += [xMid, (1 + xMid) * Math.tan(startAngle)];
-  // Control point P2
-  path += ' ' + [xMid, (1 - xMid) * Math.tan(endAngle)];
-  // Control point P3
-  path += ' ' + [1, 0];
-
-  return path;
-}
-
-/* Squash or expand a shape at a given angle (in radians)
-Returns: The transoform attribute for the SVG */
-function scaleAtAngle(ratio, angle) {
-  angle *= 180 / Math.PI;
-  return 'rotate(' + angle + ') ' +
-    'scale(1, ' + ratio + ')' +
-    'rotate(' + (-angle) + ')';
-}
-
-function rndSign() {
-  return (Math.random() >= 0.5 ? 1 : -1);
 }
 
 
@@ -148,50 +147,23 @@ document.addEventListener("DOMContentLoaded", function(e) {
     angle1 = 30 + 30 * Math.random(),
     angle2 = -30 - 30 * Math.random(),
     c1 = new ImperfectCirclePath(),
-    c2 = new ImperfectCirclePath(3,3);
+    c2 = new ImperfectCirclePath(3,3),
+    cross1 = new ImperfectLinePath(-1, 1, 1, -1),
+    cross2 = new ImperfectLinePath(1, 1, -1, -1),
+    line1 = new ImperfectLinePath(-4.5, 1.5, 4.5, 1.5),
+    line2 = new ImperfectLinePath(-4.5, -1.5, 4.5, -1.5),
+    line3 = new ImperfectLinePath(-1.5, 4.5, -1.5, -4.5),
+    line4 = new ImperfectLinePath(1.5, 4.5, 1.5, -4.5);
 
   // Circle
-  c1.addPathToSvg(svg);
-  c2.addPathToSvg(svg);
-
-  console.log(c1.path);
-
-  c1.path.attr('filter', 'url(#chalkTexture)')
-    .attr('fill', 'none')
-    .attr('stroke', 'white')
-    .attr('stroke-width', '0.1');
-  c2.path.attr('filter', 'url(#chalkTexture)')
-    .attr('fill', 'none')
-    .attr('stroke', 'white')
-    .attr('stroke-width', '0.1');
+  chalkify(c1.addPathToSvg(svg));
+  chalkify(c2.addPathToSvg(svg));
   // Line
-  svg.append('path')
-    .attr('fill', 'none')
-    .attr('stroke', 'white')
-    .attr('stroke-width', '0.1')
-    .attr('d', function() {
-      return imperfectLine(rndSign() * (0.1 + 0.1 * Math.random()),
-        rndSign() * (0.1 + 0.1 * Math.random()));
-    })
-    .attr('transform', 'rotate(' + angle1 + ') scale(1.414)')
-    .attr('filter', 'url(#chalkTexture)');
-  svg.append('path')
-    .attr('fill', 'none')
-    .attr('stroke', 'white')
-    .attr('stroke-width', '0.1')
-    .attr('d', imperfectLine(rndSign() * (0.1 + 0.1 * Math.random()),
-      rndSign() * (0.1 + 0.1 * Math.random())))
-    .attr('transform', 'rotate(' + angle2 + ') scale(1.414)')
-    .attr('filter', 'url(#chalkTexture)');
-  // Horizontal game lines
-  for (let i = 0; i < 4; i++) {
-    svg.append('path')
-      .attr('fill', 'none')
-      .attr('stroke', 'white')
-      .attr('stroke-width', '0.2')
-      .attr('d', imperfectLine(rndSign() * (0.1 + 0.1 * Math.random()),
-        rndSign() * (0.1 + 0.1 * Math.random())))
-      .attr('transform', 'rotate(' + (i < 2 ? 0 : 90) + ') translate(0,' + (i % 2 ? 1.5 : -1.5) + ') scale(4.5, 1)')
-      .attr('filter', 'url(#chalkTexture)');
-  }
+  chalkify(cross1.addPathToSvg(svg));
+  chalkify(cross2.addPathToSvg(svg));
+  // Game lines
+  chalkify(line1.addPathToSvg(svg));
+  chalkify(line2.addPathToSvg(svg));
+  chalkify(line3.addPathToSvg(svg));
+  chalkify(line4.addPathToSvg(svg));
 });
