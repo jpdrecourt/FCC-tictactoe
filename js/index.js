@@ -160,7 +160,6 @@ class ImperfectCrossPath {
 
 class Player {
   constructor () {
-
   }
 }
 
@@ -176,26 +175,21 @@ class ComputerPlayer extends Player {
   }
 }
 
+/* Class dealing with the display of the Tic Tac Toe board */
 class TicTacToeBoard {
-  constructor(player1, player2) {
+  constructor() {
     this._board = {};
-    this._board.played = [['', '', ''],['', '', ''],['', '', '']];
-    this._svg = d3.select('#board');
-    let viewBox = this._svg.attr('viewBox').split(' ').map(Number);
+    this.svg = d3.select('#board');
+    let viewBox = this.svg.attr('viewBox').split(' ').map(Number);
     this._board.topCorner = viewBox[0];
     this._board.bottomCorner = viewBox[2] + this._board.topCorner;
     this._board.boxWidth = (this._board.bottomCorner - this._board.topCorner) / 3;
-    this._svg.on('click', () => {
-      console.log(d3.mouse(this._svg.node()));
-    });
-    this._player1 = player1;
-    this._player2 = player2;
     this._isCross = true; // Cross plays first
 
-    this._initGame();
+    this._initBoard();
   }
 
-  _initGame() {
+  _initBoard() {
     this._eraseBoard();
     this._displayGrid();
   }
@@ -213,7 +207,7 @@ class TicTacToeBoard {
     this._board.lines[2] = new ImperfectLinePath(firstLine, this._board.topCorner, firstLine, this._board.bottomCorner);
     this._board.lines[3] = new ImperfectLinePath(secondLine, this._board.topCorner, secondLine, this._board.bottomCorner);
 
-    this._svg.append('rect')
+    this.svg.append('rect')
       .attr('x', -4.5)
       .attr('y', -4.5)
       .attr('width', 9)
@@ -222,43 +216,36 @@ class TicTacToeBoard {
       .attr('stroke', 'red')
       .attr('stroke-width', 0.01);
     for (let i = 0; i < this._board.lines.length; i++) {
-      this._chalkify(this._board.lines[i].addPathToSvg(this._svg));
+      this._chalkify(this._board.lines[i].addPathToSvg(this.svg));
     }
   }
 
   /* Displays a nought at the x,y location */
   _displayNought(x, y) {
     let n = new ImperfectCirclePath(x, y);
-    this._chalkify(n.addPathToSvg(this._svg));
+    this._chalkify(n.addPathToSvg(this.svg));
     return n;
   }
   /* Displays a cross at the x,y location */
   _displayCross(x, y) {
     let c = new ImperfectCrossPath(x, y);
-    c.addPathToSvg(this._svg);
+    c.addPathToSvg(this.svg);
     for (let i = 0; i < c.path.length; i++) {
       this._chalkify(c.path[i]);
     }
     return c;
   }
 
+
   /* Play a nought or a cross at a given line and column (0 indexed)*/
-  play(l, c) {
-    if (this._board.played[l][c] !== '') {
-      console.log('Already played there!');
-      return;
-    }
-    let x = this._board.topCorner + (c + 0.5) * this._board.boxWidth,
-      y = this._board.topCorner + (l + 0.5)* this._board.boxWidth;
+  play(xClicked, yClicked) {
+    let x = this._centerSymbol(xClicked),
+      y = this._centerSymbol(yClicked);
     if (this._isCross) {
       this._displayCross(x, y);
-      this._board.played[l][c] = 'x';
     } else {
       this._displayNought(x, y);
-      this._board.played[l][c] = 'o';
     }
-
-
 
     this._isCross = !this._isCross;
   }
@@ -270,15 +257,22 @@ class TicTacToeBoard {
       .attr('stroke-width', '0.1');
     return path;
   }
+
+  _centerSymbol(v) {
+    return ((Math.floor((v - this._board.topCorner) / this._board.boxWidth) + 0.5) * this._board.boxWidth) + this._board.topCorner;
+  }
 }
 
 class TicTacToeGame {
   constructor() {
     this._game = new TicTacToeBoard();
-    this._game.play(0,0);
-    this._game.play(0,1);
-    this._game.play(1,0);
-    this._game.play(2,2);
+    this._played = [['', '', ''], ['', '', ''], ['', '', '']];
+    this._isWon = false;
+    this._player = [];
+    this._player[0] = new HumanPlayer();
+    this._player[1] = new HumanPlayer();
+    this._currentPlayer = 0;
+    this._game.svg.on("click", () =>  {this._game.play(...d3.mouse(this._game.svg.node()));});
   }
 }
 
