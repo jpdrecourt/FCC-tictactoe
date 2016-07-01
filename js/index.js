@@ -133,16 +133,66 @@ class ImperfectLinePath {
   }
 }
 
-class TicTacToe {
-  constructor(params) {
-    this._board = [];
-    this._svg = d3.select('#board');
-    this._initGame();
+/* Creates a cross - Default in square centered on 0 and of size 2
+Constructor parameters: center and size of the bounding square */
+class ImperfectCrossPath {
+  constructor(x = 0, y = 0, size = 2) {
+    this._lines = [];
+    /* Left to right line */
+    this._lines[0] = new ImperfectLinePath(x - size/2, y - size/2, x + size/2, y + size/2);
+    this._lines[1] = new ImperfectLinePath(x + size/2, y + size/2, x - size/2, y - size/2);
+    this._path = undefined;
+  }
 
+  get path() {return this._path;}
+
+  addPathToSvg(svg) {
+    if (this._path !== undefined) {
+      throw("Error: Path already added to an svg");
+    }
+    this._path = [];
+    for (let i = 0; i < this._lines.length; i++){
+      this._path[i] = this._lines[i].addPathToSvg(svg);
+    }
+    return this._path;
+  }
+}
+
+class Player {
+  constructor () {
+
+  }
+}
+
+class HumanPlayer extends Player {
+  constructor() {
+    super();
+  }
+}
+
+class ComputerPlayer extends Player {
+  constructor() {
+    super();
+  }
+}
+
+class TicTacToeBoard {
+  constructor(player1, player2) {
+    this._board = {};
+    this._board.played = [['', '', ''],['', '', ''],['', '', '']];
+    this._svg = d3.select('#board');
+    let viewBox = this._svg.attr('viewBox').split(' ').map(Number);
+    this._board.topCorner = viewBox[0];
+    this._board.bottomCorner = viewBox[2] + this._board.topCorner;
+    this._board.boxWidth = (this._board.bottomCorner - this._board.topCorner) / 3;
     this._svg.on('click', () => {
       console.log(d3.mouse(this._svg.node()));
     });
+    this._player1 = player1;
+    this._player2 = player2;
+    this._isCross = true; // Cross plays first
 
+    this._initGame();
   }
 
   _initGame() {
@@ -155,10 +205,14 @@ class TicTacToe {
   }
 
   _displayGrid() {
-    this._board[0] = new ImperfectLinePath(-4.5, 1.5, 4.5, 1.5);
-    this._board[1] = new ImperfectLinePath(-4.5, -1.5, 4.5, -1.5);
-    this._board[2] = new ImperfectLinePath(-1.5, 4.5, -1.5, -4.5);
-    this._board[3] = new ImperfectLinePath(1.5, 4.5, 1.5, -4.5);
+    let firstLine = this._board.topCorner + this._board.boxWidth,
+      secondLine = firstLine + this._board.boxWidth;
+    this._board.lines = [];
+    this._board.lines[0] = new ImperfectLinePath(this._board.topCorner, firstLine, this._board.bottomCorner, firstLine);
+    this._board.lines[1] = new ImperfectLinePath(this._board.topCorner, secondLine, this._board.bottomCorner, secondLine);
+    this._board.lines[2] = new ImperfectLinePath(firstLine, this._board.topCorner, firstLine, this._board.bottomCorner);
+    this._board.lines[3] = new ImperfectLinePath(secondLine, this._board.topCorner, secondLine, this._board.bottomCorner);
+
     this._svg.append('rect')
       .attr('x', -4.5)
       .attr('y', -4.5)
@@ -167,18 +221,65 @@ class TicTacToe {
       .attr('fill', 'none')
       .attr('stroke', 'red')
       .attr('stroke-width', 0.01);
-    for (let i = 0; i < this._board.length; i++) {
-      this._chalkify(this._board[i].addPathToSvg(this._svg));
+    for (let i = 0; i < this._board.lines.length; i++) {
+      this._chalkify(this._board.lines[i].addPathToSvg(this._svg));
     }
+  }
+
+  /* Displays a nought at the x,y location */
+  _displayNought(x, y) {
+    let n = new ImperfectCirclePath(x, y);
+    this._chalkify(n.addPathToSvg(this._svg));
+    return n;
+  }
+  /* Displays a cross at the x,y location */
+  _displayCross(x, y) {
+    let c = new ImperfectCrossPath(x, y);
+    c.addPathToSvg(this._svg);
+    for (let i = 0; i < c.path.length; i++) {
+      this._chalkify(c.path[i]);
+    }
+    return c;
+  }
+
+  /* Play a nought or a cross at a given line and column (0 indexed)*/
+  play(l, c) {
+    if (this._board.played[l][c] !== '') {
+      console.log('Already played there!');
+      return;
+    }
+    let x = this._board.topCorner + (c + 0.5) * this._board.boxWidth,
+      y = this._board.topCorner + (l + 0.5)* this._board.boxWidth;
+    if (this._isCross) {
+      this._displayCross(x, y);
+      this._board.played[l][c] = 'x';
+    } else {
+      this._displayNought(x, y);
+      this._board.played[l][c] = 'o';
+    }
+
+
+
+    this._isCross = !this._isCross;
   }
 
   _chalkify(path) {
     path.attr('filter', 'url(#chalkTexture)')
-    .attr('fill', 'none')
-    .attr('stroke', 'white')
-    .attr('stroke-width', '0.1');
+      .attr('fill', 'none')
+      .attr('stroke', 'white')
+      .attr('stroke-width', '0.1');
     return path;
   }
 }
 
-let app = new TicTacToe();
+class TicTacToeGame {
+  constructor() {
+    this._game = new TicTacToeBoard();
+    this._game.play(0,0);
+    this._game.play(0,1);
+    this._game.play(1,0);
+    this._game.play(2,2);
+  }
+}
+
+let app = new TicTacToeGame();
