@@ -159,19 +159,50 @@ class ImperfectCrossPath {
 }
 
 class Player {
-  constructor () {
+  constructor (board) {
+    this._board = board;
+    this._moveLC = [];
   }
 }
 
 class HumanPlayer extends Player {
-  constructor() {
-    super();
+  constructor(board) {
+    super(board);
   }
+
+  // Returns a move from the board
+  get moveLC() {
+    let mouseXY = d3.mouse(this._board.svg.node());
+    this._moveLC = this._board.toLC(...mouseXY);
+    return this._moveLC;
+  }
+
+  play(played) {
+    // A human player is just clicking, nothing to do here.
+    return;
+  }
+
+
 }
 
 class ComputerPlayer extends Player {
-  constructor() {
-    super();
+  constructor(board) {
+    super(board);
+  }
+
+  get moveLC() {
+    return [1, 1];
+  }
+
+  play(played) {
+    let evt = new MouseEvent("click", {
+      bubbles: true,
+      cancelable: true,
+      view: window,
+    });
+    let cb = this._board.svg.node();
+    cb.dispatchEvent(evt);
+
   }
 }
 
@@ -238,9 +269,9 @@ class TicTacToeBoard {
 
 
   /* Play a nought or a cross at a given line and column (0 indexed)*/
-  play(xClicked, yClicked) {
-    let x = this._centerSymbol(xClicked),
-      y = this._centerSymbol(yClicked);
+  play(l, c) {
+    let x = this._board.topCorner + (c + 0.5) * this._board.boxWidth,
+      y = this._board.topCorner + (l + 0.5) * this._board.boxWidth;
     if (this._isCross) {
       this._displayCross(x, y);
     } else {
@@ -258,21 +289,40 @@ class TicTacToeBoard {
     return path;
   }
 
-  _centerSymbol(v) {
-    return ((Math.floor((v - this._board.topCorner) / this._board.boxWidth) + 0.5) * this._board.boxWidth) + this._board.topCorner;
+  toLC(x, y) {
+    let moveLC = [];
+    moveLC[0] = Math.floor((y - this._board.topCorner) / this._board.boxWidth);
+    moveLC[1] = Math.floor((x - this._board.topCorner) / this._board.boxWidth);
+    return moveLC;
   }
+
 }
 
 class TicTacToeGame {
   constructor() {
-    this._game = new TicTacToeBoard();
+    this._board = new TicTacToeBoard();
     this._played = [['', '', ''], ['', '', ''], ['', '', '']];
     this._isWon = false;
     this._player = [];
-    this._player[0] = new HumanPlayer();
-    this._player[1] = new HumanPlayer();
+    this._player[0] = new HumanPlayer(this._board);
+    this._player[1] = new ComputerPlayer(this._board);
     this._currentPlayer = 0;
-    this._game.svg.on("click", () =>  {this._game.play(...d3.mouse(this._game.svg.node()));});
+    this._turn();
+//    this._board.svg.on("click", () =>  {this._board.play(...d3.mouse(this._board.svg.node()));});
+  }
+
+  // Run a turn of the game
+  _turn() {
+    this._player[this._currentPlayer].play(this._played);
+    this._board.svg.on("click", () => {this._evalMove();});
+  }
+
+  // Evaluates whether the move is legal and processes it
+  _evalMove() {
+    let moveLC = this._player[this._currentPlayer].moveLC;
+    this._board.play(...moveLC);
+    this._currentPlayer = !this._currentPlayer + 0;
+    this._turn();
   }
 }
 
