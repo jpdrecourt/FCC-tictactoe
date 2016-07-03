@@ -10,3 +10,9 @@ body {
   justify-content: center;
   margin: 0;
 }
+
+#gameMsg {
+  color: white;
+  position: absolute;
+  margin: 10px;
+}

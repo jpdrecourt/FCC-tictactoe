@@ -176,13 +176,10 @@ class HumanPlayer extends Player {
     this._moveLC = this._board.toLC(...mouseXY);
     return this._moveLC;
   }
-
-  play(played) {
+  play() {
     // A human player is just clicking, nothing to do here.
     return;
   }
-
-
 }
 
 class ComputerPlayer extends Player {
@@ -194,7 +191,7 @@ class ComputerPlayer extends Player {
     return [1, 1];
   }
 
-  play(played) {
+  play() {
     let evt = new MouseEvent("click", {
       bubbles: true,
       cancelable: true,
@@ -209,14 +206,17 @@ class ComputerPlayer extends Player {
 /* Class dealing with the display of the Tic Tac Toe board */
 class TicTacToeBoard {
   constructor() {
-    this._board = {};
+    // Init public variables
     this.svg = d3.select('#board');
+    this.played = [['', '', ''], ['', '', ''], ['', '', '']];
     let viewBox = this.svg.attr('viewBox').split(' ').map(Number);
+    // Init private variables
+    this._board = {};
     this._board.topCorner = viewBox[0];
     this._board.bottomCorner = viewBox[2] + this._board.topCorner;
     this._board.boxWidth = (this._board.bottomCorner - this._board.topCorner) / 3;
     this._isCross = true; // Cross plays first
-
+    // Init the board
     this._initBoard();
   }
 
@@ -277,7 +277,7 @@ class TicTacToeBoard {
     } else {
       this._displayNought(x, y);
     }
-
+    this.played[l][c] = this._isCross ? 'x' : 'o';
     this._isCross = !this._isCross;
   }
 
@@ -301,11 +301,10 @@ class TicTacToeBoard {
 class TicTacToeGame {
   constructor() {
     this._board = new TicTacToeBoard();
-    this._played = [['', '', ''], ['', '', ''], ['', '', '']];
     this._isWon = false;
     this._player = [];
     this._player[0] = new HumanPlayer(this._board);
-    this._player[1] = new ComputerPlayer(this._board);
+    this._player[1] = new HumanPlayer(this._board);
     this._currentPlayer = 0;
     this._turn();
 //    this._board.svg.on("click", () =>  {this._board.play(...d3.mouse(this._board.svg.node()));});
@@ -313,16 +312,26 @@ class TicTacToeGame {
 
   // Run a turn of the game
   _turn() {
-    this._player[this._currentPlayer].play(this._played);
+    this._player[this._currentPlayer].play();
     this._board.svg.on("click", () => {this._evalMove();});
   }
 
   // Evaluates whether the move is legal and processes it
   _evalMove() {
+    document.getElementById('gameMsg').innerHTML = '';
     let moveLC = this._player[this._currentPlayer].moveLC;
-    this._board.play(...moveLC);
-    this._currentPlayer = !this._currentPlayer + 0;
+    if (this._isLegal(moveLC)) {
+      this._board.play(...moveLC);
+      console.log(this._board.played);
+      this._currentPlayer = !this._currentPlayer + 0;
+    } else {
+      document.getElementById('gameMsg').innerHTML = 'Illegal move, try again';
+    }
     this._turn();
+  }
+
+  _isLegal(moveLC) {
+    return this._board.played[moveLC[0]][moveLC[1]] === '';
   }
 }
 
