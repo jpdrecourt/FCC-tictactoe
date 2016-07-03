@@ -32,8 +32,17 @@ class ImperfectCirclePath {
     }
     this._path = svg.append('path')
       .attr('d', this._imperfectCirclePath())
-      .attr('transform', this._transformPath());
+      .attr('transform', this._transformPath())
+      .attr('stroke-dasharray', 10)
+      .attr('stroke-dashoffset', 10);
     return this._path;
+  }
+
+  draw() {
+    return this._path.transition()
+      .duration(500)
+      .ease('linear')
+      .attr('stroke-dashoffset', 0);
   }
 
   _imperfectCirclePath() {
@@ -103,8 +112,17 @@ class ImperfectLinePath {
     }
     this._path = svg.append('path')
       .attr('d', this._imperfectLine())
-      .attr('transform', this._transformPath());
+      .attr('transform', this._transformPath())
+      .attr('stroke-dasharray', 10)
+      .attr('stroke-dashoffset', 10);
     return this._path;
+  }
+
+  draw() {
+    return this._path.transition()
+      .duration(500)
+      .ease('linear')
+      .attr('stroke-dashoffset', 0);
   }
 
   /* Imperfect horizontal line from [-1,0] to [1,0]
@@ -155,6 +173,10 @@ class ImperfectCrossPath {
       this._path[i] = this._lines[i].addPathToSvg(svg);
     }
     return this._path;
+  }
+
+  draw() {
+    this._lines[0].draw().each("end", () => {this._lines[1].draw();});
   }
 }
 
@@ -208,7 +230,7 @@ class TicTacToeBoard {
   constructor() {
     // Init public variables
     this.svg = d3.select('#board');
-    this.played = [['', '', ''], ['', '', ''], ['', '', '']];
+    this.played = [[0, 0, 0], [0, 0, 0], [0, 0, 0]];
     let viewBox = this.svg.attr('viewBox').split(' ').map(Number);
     // Init private variables
     this._board = {};
@@ -246,8 +268,16 @@ class TicTacToeBoard {
       .attr('fill', 'none')
       .attr('stroke', 'red')
       .attr('stroke-width', 0.01);
+    let prev;
     for (let i = 0; i < this._board.lines.length; i++) {
       this._chalkify(this._board.lines[i].addPathToSvg(this.svg));
+    }
+    this._draw(0);
+  }
+
+  _draw(n) {
+    if (n < this._board.lines.length) {
+      return this._board.lines[n].draw().each("end", () => {this._draw(n + 1);});
     }
   }
 
@@ -255,12 +285,14 @@ class TicTacToeBoard {
   _displayNought(x, y) {
     let n = new ImperfectCirclePath(x, y);
     this._chalkify(n.addPathToSvg(this.svg));
+    n.draw();
     return n;
   }
   /* Displays a cross at the x,y location */
   _displayCross(x, y) {
     let c = new ImperfectCrossPath(x, y);
     c.addPathToSvg(this.svg);
+    c.draw();
     for (let i = 0; i < c.path.length; i++) {
       this._chalkify(c.path[i]);
     }
@@ -277,7 +309,7 @@ class TicTacToeBoard {
     } else {
       this._displayNought(x, y);
     }
-    this.played[l][c] = this._isCross ? 'x' : 'o';
+    this.played[l][c] = this._isCross ? 1 : -1;
     this._isCross = !this._isCross;
   }
 
@@ -301,13 +333,11 @@ class TicTacToeBoard {
 class TicTacToeGame {
   constructor() {
     this._board = new TicTacToeBoard();
-    this._isWon = false;
     this._player = [];
     this._player[0] = new HumanPlayer(this._board);
     this._player[1] = new HumanPlayer(this._board);
     this._currentPlayer = 0;
     this._turn();
-//    this._board.svg.on("click", () =>  {this._board.play(...d3.mouse(this._board.svg.node()));});
   }
 
   // Run a turn of the game
@@ -318,11 +348,15 @@ class TicTacToeGame {
 
   // Evaluates whether the move is legal and processes it
   _evalMove() {
+    this._board.svg.on("click", () => {return false;});
     document.getElementById('gameMsg').innerHTML = '';
     let moveLC = this._player[this._currentPlayer].moveLC;
     if (this._isLegal(moveLC)) {
       this._board.play(...moveLC);
-      console.log(this._board.played);
+      if (this._isWon(moveLC)) {
+        this._winSequence();
+        return;
+      }
       this._currentPlayer = !this._currentPlayer + 0;
     } else {
       document.getElementById('gameMsg').innerHTML = 'Illegal move, try again';
@@ -331,7 +365,45 @@ class TicTacToeGame {
   }
 
   _isLegal(moveLC) {
-    return this._board.played[moveLC[0]][moveLC[1]] === '';
+    return this._board.played[moveLC[0]][moveLC[1]] === 0;
+  }
+
+  _isWon(moveLC) {
+    return this._checkDiagonal(moveLC) || this._checkRow(moveLC) || this._checkColumn(moveLC);
+  }
+
+  _checkDiagonal(moveLC) {
+    if ((moveLC[0] === moveLC[1]) || (moveLC[0] === (2 - moveLC[1]))) {
+      let diag1 = 0,
+        diag2 = 0;
+      for (let i = 0; i < 3; i++) {
+        diag1 += this._board.played[i][i];
+        diag2 += this._board.played[i][2 - i];
+        }
+      return Math.abs(diag1) === 3 || Math.abs(diag2) === 3;
+    } else {
+      return false;
+    }
+  }
+
+  _checkRow(moveLC) {
+    let row = 0;
+    for (let i = 0; i < 3; i++) {
+      row += this._board.played[moveLC[0]][i];
+    }
+    return Math.abs(row) === 3;
+  }
+
+  _checkColumn(moveLC) {
+    let col = 0;
+    for (let i = 0; i < 3; i++){
+      col += this._board.played[i][moveLC[1]];
+    }
+    return Math.abs(col) === 3;
+  }
+
+  _winSequence() {
+    document.getElementById('gameMsg').innerHTML = 'You won!';
   }
 }
 
