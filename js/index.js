@@ -8,7 +8,6 @@ Constructor parameter:
   r: radius of the circle (default to 1)
 */
 class ImperfectCirclePath {
-  // TODO Animation
   constructor(x = 0, y = 0, r = 1) {
     this._x = x;
     this._y = y;
@@ -40,7 +39,7 @@ class ImperfectCirclePath {
 
   draw() {
     return this._path.transition()
-      .duration(500)
+      .duration(400)
       .ease('linear')
       .attr('stroke-dashoffset', 0);
   }
@@ -87,7 +86,6 @@ Constructor parameter:
  x0, y0: Coordinates of the end (default to [1, 0])
 */
 class ImperfectLinePath {
-  // TODO Animation
   constructor (x0=0, y0=0, x1=1, y1=0) {
     this._x0 = x0;
     this._y0 = y0;
@@ -120,7 +118,7 @@ class ImperfectLinePath {
 
   draw() {
     return this._path.transition()
-      .duration(500)
+      .duration(300)
       .ease('linear')
       .attr('stroke-dashoffset', 0);
   }
