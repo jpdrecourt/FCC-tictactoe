@@ -217,53 +217,6 @@ class ImperfectCrossPath {
   _transformPath() {
     return ` translate (${this._x}, ${this._y}) scale(${this._w / 2})`;
   }
-
-}
-
-
-class Player {
-  constructor (board) {
-    this._board = board;
-    this._moveLC = [];
-  }
-}
-
-class HumanPlayer extends Player {
-  constructor(board) {
-    super(board);
-  }
-
-  // Returns a move from the board
-  get moveLC() {
-    let mouseXY = d3.mouse(this._board.svg.node());
-    this._moveLC = this._board.toLC(...mouseXY);
-    return this._moveLC;
-  }
-  play() {
-    // A human player is just clicking, nothing to do here.
-    return;
-  }
-}
-
-class ComputerPlayer extends Player {
-  constructor(board) {
-    super(board);
-  }
-
-  get moveLC() {
-    return [1, 1];
-  }
-
-  play() {
-    let evt = new MouseEvent("click", {
-      bubbles: true,
-      cancelable: true,
-      view: window,
-    });
-    let cb = this._board.svg.node();
-    cb.dispatchEvent(evt);
-
-  }
 }
 
 /* Class dealing with the display of the Tic Tac Toe board */
@@ -296,7 +249,7 @@ class TicTacToeBoard {
 
   _displayGrid() {
     let firstLine = this._board.topCorner + this._board.boxWidth,
-      secondLine = firstLine + this._board.boxWidth;
+    secondLine = firstLine + this._board.boxWidth;
     this._board.lines = [];
     this._board.lines[0] = new ImperfectLinePath(this._board.topCorner, firstLine, this._board.bottomCorner, firstLine);
     this._board.lines[1] = new ImperfectLinePath(this._board.topCorner, secondLine, this._board.bottomCorner, secondLine);
@@ -318,48 +271,73 @@ class TicTacToeBoard {
   }
 
   /* Displays a nought at the x,y location */
-  _displayNought(x, y) {
+  _displayNought(x, y, callback) {
     let n = new ImperfectCirclePath(x, y);
     this._chalkify(n.addPathToSvg(this.svg));
-    n.draw().each('end', () => {this._enableClick();});
+    n.draw().each('end', () => {this._enableClick(); callback();});
     return n;
   }
   /* Displays a cross at the x,y location */
-  _displayCross(x, y) {
+  _displayCross(x, y, callback) {
     let c = new ImperfectCrossPath(x, y);
     this._chalkify(c.addPathToSvg(this.svg));
-    c.draw().each('end', () => {this._enableClick();});
+    c.draw().each('end', () => {this._enableClick(); callback();});
     return c;
   }
 
 
-  /* Play a nought or a cross at a given line and column (0 indexed)*/
-  play(l, c) {
+  /* Play a nought or a cross at a given row and column (0 indexed)*/
+  play(moveRC, callback) {
+    let r = moveRC[0], c = moveRC[1];
     this._disableClick();
     let x = this._board.topCorner + (c + 0.5) * this._board.boxWidth,
-      y = this._board.topCorner + (l + 0.5) * this._board.boxWidth;
+    y = this._board.topCorner + (r + 0.5) * this._board.boxWidth;
     if (this._isCross) {
-      this._displayCross(x, y);
+      this._displayCross(x, y, callback);
     } else {
-      this._displayNought(x, y);
+      this._displayNought(x, y, callback);
     }
-    this.played[l][c] = this._isCross ? 1 : -1;
+    this.played[r][c] = this._isCross ? 1 : -1;
     this._isCross = !this._isCross;
+  }
+
+  won(startRC, endRC) {
+    let bStart = this._board.topCorner,
+      bEnd = this._board.bottomCorner,
+      l;
+    if (startRC[0] == endRC[0]) {
+      // The win is a row
+      let aStart = this._board.topCorner + (startRC[0] + 0.5) * this._board.boxWidth;
+      l = new ImperfectLinePath(bStart, aStart, bEnd, aStart);
+    } else if (startRC[1] == endRC[1]) {
+      // The win is a column
+      let aStart = this._board.topCorner + (startRC[1] + 0.5) * this._board.boxWidth;
+      l = new ImperfectLinePath(aStart, bStart, aStart, bEnd);
+    } else if (startRC[0] == startRC[1] && endRC[0] == endRC[1]) {
+      // The win is the first diagonal
+      l = new ImperfectLinePath(bStart, bStart, bEnd, bEnd);
+    } else {
+      // The win is the second diagonal
+      l = new ImperfectLinePath(bEnd, bStart, bStart, bEnd);
+    }
+    this._chalkify(l.addPathToSvg(this.svg));
+    l.draw();
+    return;
   }
 
   _chalkify(path) {
     path.attr('filter', 'url(#chalkTexture)')
-      .attr('fill', 'none')
-      .attr('stroke', 'white')
-      .attr('stroke-width', '0.1');
+    .attr('fill', 'none')
+    .attr('stroke', 'white')
+    .attr('stroke-width', '0.1');
     return path;
   }
 
-  toLC(x, y) {
-    let moveLC = [];
-    moveLC[0] = Math.floor((y - this._board.topCorner) / this._board.boxWidth);
-    moveLC[1] = Math.floor((x - this._board.topCorner) / this._board.boxWidth);
-    return moveLC;
+  toRC(x, y) {
+    let moveRC = [];
+    moveRC[0] = Math.floor((y - this._board.topCorner) / this._board.boxWidth);
+    moveRC[1] = Math.floor((x - this._board.topCorner) / this._board.boxWidth);
+    return moveRC;
   }
 
   _enableClick() {
@@ -371,6 +349,50 @@ class TicTacToeBoard {
   }
 }
 
+class Player {
+  constructor (board) {
+    this._board = board;
+    this._moveRC = [];
+  }
+}
+
+class HumanPlayer extends Player {
+  constructor(board) {
+    super(board);
+  }
+
+  // Returns a move from the board
+  get moveRC() {
+    let mouseXY = d3.mouse(this._board.svg.node());
+    this._moveRC = this._board.toRC(...mouseXY);
+    return this._moveRC;
+  }
+  play() {
+    // A human player is just clicking, nothing to do here.
+    return;
+  }
+}
+
+class ComputerPlayer extends Player {
+  constructor(board) {
+    super(board);
+  }
+
+  get moveRC() {
+    return [1, 1];
+  }
+
+  play() {
+    let evt = new MouseEvent("click", {
+      bubbles: true,
+      cancelable: true,
+      view: window,
+    });
+    let cb = this._board.svg.node();
+    cb.dispatchEvent(evt);
+
+  }
+}
 
 class TicTacToeGame {
   constructor() {
@@ -378,7 +400,8 @@ class TicTacToeGame {
     this._player = [];
     this._player[0] = new HumanPlayer(this._board);
     this._player[1] = new HumanPlayer(this._board);
-    this._currentPlayer = 0;
+    this._currentPlayer = 0; // Value 0 or 1
+    // Start first turn
     this._turn();
   }
 
@@ -392,60 +415,136 @@ class TicTacToeGame {
   _evalMove() {
     this._board.svg.on("click", () => {return false;});
     document.getElementById('gameMsg').innerHTML = '';
-    let moveLC = this._player[this._currentPlayer].moveLC;
-    if (this._isLegal(moveLC)) {
-      this._board.play(...moveLC);
-      if (this._isWon(moveLC)) {
-        this._winSequence();
-        return;
-      }
-      this._currentPlayer = !this._currentPlayer + 0;
+    let moveRC = this._player[this._currentPlayer].moveRC;
+    if (this._isLegal(moveRC)) {
+      this._board.play(moveRC, () => {this._checkWin(moveRC);});
     } else {
       document.getElementById('gameMsg').innerHTML = 'Illegal move, try again';
+      this._turn();
     }
-    this._turn();
   }
 
-  _isLegal(moveLC) {
-    return this._board.played[moveLC[0]][moveLC[1]] === 0;
+  _isLegal(moveRC) {
+    return this._board.played[moveRC[0]][moveRC[1]] === 0;
   }
 
-  _isWon(moveLC) {
-    return this._checkDiagonal(moveLC) || this._checkRow(moveLC) || this._checkColumn(moveLC);
+  _checkWin(moveRC) {
+    let won = this._winningPattern(moveRC);
+    if (won === '') {
+      if (this._isDraw()) {
+        this._drawSequence();
+      } else {
+        this._currentPlayer = !this._currentPlayer + 0;
+        this._turn();
+      }
+    } else {
+      this._winSequence(moveRC, won);
+    }
   }
 
-  _checkDiagonal(moveLC) {
-    if ((moveLC[0] === moveLC[1]) || (moveLC[0] === (2 - moveLC[1]))) {
-      let diag1 = 0,
-        diag2 = 0;
+  // Check if it's a draw knowing it's not a win
+  _isDraw() {
+    for (let i = 0, r = this._board.played.length; i < r; i++) {
+      for (let j = 0, c = this._board.played[i].length; j < c; j++) {
+        if (this._board.played[i][j] === 0) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
+  // Returns whether the win is a row (r), a diagonal (d1 or d2) or a column (c) or not winning (empty string)
+  _winningPattern(moveRC) {
+    if (this._checkDiagonal1(moveRC)) {
+      return 'd1';
+    }
+    if (this._checkDiagonal2(moveRC)) {
+      return 'd2';
+    }
+    if (this._checkRow(moveRC)) {
+      return 'r';
+    }
+    if (this._checkColumn(moveRC)) {
+        return 'c';
+    }
+    // Not won
+    return '';
+  }
+
+  _checkDiagonal1(moveRC) {
+    if (moveRC[0] === moveRC[1]) {
+      let diag1 = 0;
       for (let i = 0; i < 3; i++) {
         diag1 += this._board.played[i][i];
-        diag2 += this._board.played[i][2 - i];
         }
-      return Math.abs(diag1) === 3 || Math.abs(diag2) === 3;
+      return Math.abs(diag1) === 3;
     } else {
       return false;
     }
   }
 
-  _checkRow(moveLC) {
+  _checkDiagonal2(moveRC) {
+    if (moveRC[0] === (2 - moveRC[1])) {
+      let diag2 = 0;
+      for (let i = 0; i < 3; i++) {
+        diag2 += this._board.played[i][2 - i];
+      }
+      return Math.abs(diag2) === 3;
+    } else {
+      return false;
+    }
+  }
+
+  _checkRow(moveRC) {
     let row = 0;
     for (let i = 0; i < 3; i++) {
-      row += this._board.played[moveLC[0]][i];
+      row += this._board.played[moveRC[0]][i];
     }
     return Math.abs(row) === 3;
   }
 
-  _checkColumn(moveLC) {
+  _checkColumn(moveRC) {
     let col = 0;
     for (let i = 0; i < 3; i++){
-      col += this._board.played[i][moveLC[1]];
+      col += this._board.played[i][moveRC[1]];
     }
     return Math.abs(col) === 3;
   }
 
-  _winSequence() {
-    document.getElementById('gameMsg').innerHTML = 'You won!';
+  _drawSequence() {
+    document.getElementById('gameMsg').innerHTML = "It's a draw!";
+
+  }
+
+  _winSequence(moveRC, won) {
+    this._board.won(...this._wonRC(moveRC, won));
+    document.getElementById('gameMsg').innerHTML = 'You won! ' + won;
+  }
+
+  // Returns an array of startRC and stopRC giving the start and end square of the winning pattern
+  _wonRC(moveRC, won) {
+    let startRC = [],
+      stopRC = [];
+    switch (won) {
+      case 'd1':
+        startRC = [0, 0];
+        stopRC = [2 ,2];
+        break;
+      case 'd2':
+        startRC = [0, 2];
+        stopRC = [2, 0];
+        break;
+      case 'r':
+        startRC = [moveRC[0], 0];
+        stopRC = [moveRC[0], 2];
+        break;
+      case 'c':
+        startRC = [0, moveRC[1]];
+        stopRC = [2, moveRC[1]];
+        break;
+    }
+    return [startRC, stopRC];
   }
 }
 
