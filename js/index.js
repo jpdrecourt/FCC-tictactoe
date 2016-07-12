@@ -24,7 +24,7 @@ class ImperfectCirclePath {
   get r() {return this._y;}
   get path() {return this._path;}
 
-  /* Appends the path to a d3 svg selector an returns that path*/
+  /* Appends the path to a d3 svg selector an returns that path */
   addPathToSvg(svg) {
     if (this._path !== undefined) {
       throw("Error: Path already added to an svg");
@@ -149,34 +149,77 @@ class ImperfectLinePath {
   }
 }
 
-/* Creates a cross - Default in square centered on 0 and of size 2
-Constructor parameters: center and size of the bounding square */
+/* Creates a cross - Default in square centered on 0 and of width of 2
+Constructor parameters: center and width of the bounding square */
 class ImperfectCrossPath {
-  constructor(x = 0, y = 0, size = 2) {
-    this._lines = [];
-    /* Left to right line */
-    this._lines[0] = new ImperfectLinePath(x - size/2, y - size/2, x + size/2, y + size/2);
-    this._lines[1] = new ImperfectLinePath(x + size/2, y + size/2, x - size/2, y - size/2);
+  constructor(x=0, y=0, w=2, delta=0.6) {
+    this._x = x;
+    this._y = y;
+    this._w = w;
     this._path = undefined;
+    this._yMidStart = delta * (-0.5 + Math.random());
+    this._yMidEnd = delta * (-0.5 + Math.random());
+    this._xMidStart = delta * (-0.5 + Math.random());
+    this._xMidEnd = delta * (-0.5 + Math.random());
   }
 
+  get x() {return this._x;}
+  get y() {return this._y;}
+  get w() {return this._w;}
   get path() {return this._path;}
 
   addPathToSvg(svg) {
     if (this._path !== undefined) {
       throw("Error: Path already added to an svg");
     }
-    this._path = [];
-    for (let i = 0; i < this._lines.length; i++){
-      this._path[i] = this._lines[i].addPathToSvg(svg);
-    }
+    this._path = svg.append('path')
+      .attr('d', this._imperfectCross())
+      .attr('transform', this._transformPath())
+      .attr('stroke-dasharray', 10)
+      .attr('stroke-dashoffset', 10);
+    // Hide the junction line and create a symmetric effect on the right
+    // This only works when the background color is known.
+    svg.append('path')
+      .attr('d', 'M-1.1,-1.2 L-0.9,-0.8 L-0.9,0.8 L-1.1,1.2 Z M1.1,-1.2 L0.9,-0.8 L0.9,0.8 L1.1,1.2 Z')
+      .attr('stroke', 'none')
+      .attr('fill', 'black')
+      .attr('transform', this._transformPath());
     return this._path;
   }
 
   draw() {
-    this._lines[0].draw().each("end", () => {this._lines[1].draw();});
+    return this._path.transition()
+      .duration(500)
+      .ease('linear')
+      .attr('stroke-dashoffset', 0);
   }
+
+  _imperfectCross() {
+    // First stroke - P0
+    let path = 'M1,-1 C';
+    // First stroke - P1
+    path += [0, this._yMidStart];
+    // First stroke - P2
+    path += ' ' + [0, this._yMidEnd];
+    // First stroke - P3
+    path += ' ' + [-1, 1];
+    // Second stroke - P0 - Junction line essential for the look of the stroke
+    path += ' L-1,-1 C';
+    // Second stroke - P1
+    path += [this._xMidStart, 0];
+    // Second stroke - P2
+    path += ' ' + [ this._xMidEnd, 0];
+    // Second stroke - P3
+    path += ' ' + [1, 1];
+    return path;
+  }
+
+  _transformPath() {
+    return ` translate (${this._x}, ${this._y}) scale(${this._w / 2})`;
+  }
+
 }
+
 
 class Player {
   constructor (board) {
@@ -231,6 +274,7 @@ class TicTacToeBoard {
     this.played = [[0, 0, 0], [0, 0, 0], [0, 0, 0]];
     let viewBox = this.svg.attr('viewBox').split(' ').map(Number);
     // Init private variables
+    this._mask = document.getElementById('mask');
     this._board = {};
     this._board.topCorner = viewBox[0];
     this._board.bottomCorner = viewBox[2] + this._board.topCorner;
@@ -241,6 +285,7 @@ class TicTacToeBoard {
   }
 
   _initBoard() {
+    this._disableClick();
     this._eraseBoard();
     this._displayGrid();
   }
@@ -258,15 +303,6 @@ class TicTacToeBoard {
     this._board.lines[2] = new ImperfectLinePath(firstLine, this._board.topCorner, firstLine, this._board.bottomCorner);
     this._board.lines[3] = new ImperfectLinePath(secondLine, this._board.topCorner, secondLine, this._board.bottomCorner);
 
-    this.svg.append('rect')
-      .attr('x', -4.5)
-      .attr('y', -4.5)
-      .attr('width', 9)
-      .attr('height', 9)
-      .attr('fill', 'none')
-      .attr('stroke', 'red')
-      .attr('stroke-width', 0.01);
-    let prev;
     for (let i = 0; i < this._board.lines.length; i++) {
       this._chalkify(this._board.lines[i].addPathToSvg(this.svg));
     }
@@ -276,6 +312,8 @@ class TicTacToeBoard {
   _draw(n) {
     if (n < this._board.lines.length) {
       return this._board.lines[n].draw().each("end", () => {this._draw(n + 1);});
+    } else {
+      this._enableClick();
     }
   }
 
@@ -283,23 +321,21 @@ class TicTacToeBoard {
   _displayNought(x, y) {
     let n = new ImperfectCirclePath(x, y);
     this._chalkify(n.addPathToSvg(this.svg));
-    n.draw();
+    n.draw().each('end', () => {this._enableClick();});
     return n;
   }
   /* Displays a cross at the x,y location */
   _displayCross(x, y) {
     let c = new ImperfectCrossPath(x, y);
-    c.addPathToSvg(this.svg);
-    c.draw();
-    for (let i = 0; i < c.path.length; i++) {
-      this._chalkify(c.path[i]);
-    }
+    this._chalkify(c.addPathToSvg(this.svg));
+    c.draw().each('end', () => {this._enableClick();});
     return c;
   }
 
 
   /* Play a nought or a cross at a given line and column (0 indexed)*/
   play(l, c) {
+    this._disableClick();
     let x = this._board.topCorner + (c + 0.5) * this._board.boxWidth,
       y = this._board.topCorner + (l + 0.5) * this._board.boxWidth;
     if (this._isCross) {
@@ -326,7 +362,15 @@ class TicTacToeBoard {
     return moveLC;
   }
 
+  _enableClick() {
+    this._mask.style.zIndex = '-1';
+  }
+
+  _disableClick() {
+    this._mask.style.zIndex = '1';
+  }
 }
+
 
 class TicTacToeGame {
   constructor() {

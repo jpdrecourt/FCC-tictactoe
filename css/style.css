@@ -16,3 +16,13 @@ body {
   position: absolute;
   margin: 10px;
 }
+
+#mask {
+  position: absolute;
+  left: 0px;
+  top: 0px;
+  width: 100%;
+  height: 100%;
+  background-color: none;
+  opacity: 0;
+}
