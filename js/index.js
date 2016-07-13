@@ -221,7 +221,8 @@ class ImperfectCrossPath {
 
 /* Class dealing with the display of the Tic Tac Toe board */
 class TicTacToeBoard {
-  constructor() {
+  // Callback when the board is drawn
+  constructor(callback) {
     // Init public variables
     this.svg = d3.select('#board');
     this.played = [[0, 0, 0], [0, 0, 0], [0, 0, 0]];
@@ -234,20 +235,20 @@ class TicTacToeBoard {
     this._board.boxWidth = (this._board.bottomCorner - this._board.topCorner) / 3;
     this._isCross = true; // Cross plays first
     // Init the board
-    this._initBoard();
+    this._initBoard(callback);
   }
 
-  _initBoard() {
+  _initBoard(callback) {
     this._disableClick();
     this._eraseBoard();
-    this._displayGrid();
+    this._displayGrid(callback);
   }
 
   _eraseBoard() {
 
   }
 
-  _displayGrid() {
+  _displayGrid(callback) {
     let firstLine = this._board.topCorner + this._board.boxWidth,
     secondLine = firstLine + this._board.boxWidth;
     this._board.lines = [];
@@ -259,14 +260,15 @@ class TicTacToeBoard {
     for (let i = 0; i < this._board.lines.length; i++) {
       this._chalkify(this._board.lines[i].addPathToSvg(this.svg));
     }
-    this._draw(0);
+    this._draw(0, callback);
   }
 
-  _draw(n) {
+  _draw(n, callback) {
     if (n < this._board.lines.length) {
-      return this._board.lines[n].draw().each("end", () => {this._draw(n + 1);});
+      return this._board.lines[n].draw().each("end", () => {this._draw(n + 1, callback);});
     } else {
       this._enableClick();
+      callback();
     }
   }
 
@@ -350,21 +352,21 @@ class TicTacToeBoard {
 }
 
 class Player {
-  constructor (board) {
-    this._board = board;
+  constructor (game) {
+    this._game = game;
     this._moveRC = [];
   }
 }
 
 class HumanPlayer extends Player {
-  constructor(board) {
-    super(board);
+  constructor(game) {
+    super(game);
   }
 
   // Returns a move from the board
   get moveRC() {
-    let mouseXY = d3.mouse(this._board.svg.node());
-    this._moveRC = this._board.toRC(...mouseXY);
+    let mouseXY = d3.mouse(this._game.board.svg.node());
+    this._moveRC = this._game.board.toRC(...mouseXY);
     return this._moveRC;
   }
   play() {
@@ -373,51 +375,88 @@ class HumanPlayer extends Player {
   }
 }
 
+/* Computer player using the minimax algorithm
+Inspired by http://http://neverstopbuilding.com/minimax
+The main difference is that the player doesn't affect the current game.
+It just uses the rules of the TicTacToeGame class */
 class ComputerPlayer extends Player {
-  constructor(board) {
-    super(board);
+  constructor(game) {
+    super(game);
   }
 
   get moveRC() {
-    return [1, 1];
+    return this._moveRC;
   }
 
+  // Play seqquence
   play() {
+    this._minimaxInit();
+    this._simulateClick();
+  }
+
+  // Scoring
+  _score(isPlayerMe, depth) {
+    let isWon = this._game.winningPattern(this._moveRC);
+    if (isWon) {
+      if (isPlayerMe) {
+        return 10 - depth;
+      } else {
+        return depth - 10;
+      }
+    } else {
+      return 0;
+    }
+  }
+
+  // Minimax algorithm returning a moveRC array
+  _minimaxInit () {
+    let moveRC = [],
+      played = this._game.board.played,
+      win = this._game.winningPattern;
+    // DEBUG Random play from computer
+    for (let i = 0, r = played.length; i < r; i++) {
+      for (let j = 0, c = played[i].length; j < c; j++){
+        if (played[i][j] === 0) {
+          this._moveRC = [i, j];
+        }
+      }
+    }
+  }
+
+  // To indicate that the computer has 'played'
+  _simulateClick() {
     let evt = new MouseEvent("click", {
       bubbles: true,
       cancelable: true,
       view: window,
     });
-    let cb = this._board.svg.node();
+    let cb = this._game.board.svg.node();
     cb.dispatchEvent(evt);
-
   }
 }
 
 class TicTacToeGame {
   constructor() {
-    this._board = new TicTacToeBoard();
     this._player = [];
-    this._player[0] = new HumanPlayer(this._board);
-    this._player[1] = new HumanPlayer(this._board);
+    this._player[0] = new HumanPlayer(this);
+    this._player[1] = new ComputerPlayer(this);
     this._currentPlayer = 0; // Value 0 or 1
     // Start first turn
-    this._turn();
+    this.board = new TicTacToeBoard(() => {this._turn();});
   }
 
   // Run a turn of the game
   _turn() {
+    this.board.svg.on("click", () => {this._evalMove();});
     this._player[this._currentPlayer].play();
-    this._board.svg.on("click", () => {this._evalMove();});
   }
 
   // Evaluates whether the move is legal and processes it
   _evalMove() {
-    this._board.svg.on("click", () => {return false;});
     document.getElementById('gameMsg').innerHTML = '';
     let moveRC = this._player[this._currentPlayer].moveRC;
     if (this._isLegal(moveRC)) {
-      this._board.play(moveRC, () => {this._checkWin(moveRC);});
+      this.board.play(moveRC, () => {this._checkWin(moveRC);});
     } else {
       document.getElementById('gameMsg').innerHTML = 'Illegal move, try again';
       this._turn();
@@ -425,11 +464,11 @@ class TicTacToeGame {
   }
 
   _isLegal(moveRC) {
-    return this._board.played[moveRC[0]][moveRC[1]] === 0;
+    return this.board.played[moveRC[0]][moveRC[1]] === 0;
   }
 
   _checkWin(moveRC) {
-    let won = this._winningPattern(moveRC);
+    let won = this.winningPattern(moveRC);
     if (won === '') {
       if (this._isDraw()) {
         this._drawSequence();
@@ -444,9 +483,9 @@ class TicTacToeGame {
 
   // Check if it's a draw knowing it's not a win
   _isDraw() {
-    for (let i = 0, r = this._board.played.length; i < r; i++) {
-      for (let j = 0, c = this._board.played[i].length; j < c; j++) {
-        if (this._board.played[i][j] === 0) {
+    for (let i = 0, r = this.board.played.length; i < r; i++) {
+      for (let j = 0, c = this.board.played[i].length; j < c; j++) {
+        if (this.board.played[i][j] === 0) {
           return false;
         }
       }
@@ -455,7 +494,7 @@ class TicTacToeGame {
   }
 
   // Returns whether the win is a row (r), a diagonal (d1 or d2) or a column (c) or not winning (empty string)
-  _winningPattern(moveRC) {
+  winningPattern(moveRC) {
     if (this._checkDiagonal1(moveRC)) {
       return 'd1';
     }
@@ -476,7 +515,7 @@ class TicTacToeGame {
     if (moveRC[0] === moveRC[1]) {
       let diag1 = 0;
       for (let i = 0; i < 3; i++) {
-        diag1 += this._board.played[i][i];
+        diag1 += this.board.played[i][i];
         }
       return Math.abs(diag1) === 3;
     } else {
@@ -488,7 +527,7 @@ class TicTacToeGame {
     if (moveRC[0] === (2 - moveRC[1])) {
       let diag2 = 0;
       for (let i = 0; i < 3; i++) {
-        diag2 += this._board.played[i][2 - i];
+        diag2 += this.board.played[i][2 - i];
       }
       return Math.abs(diag2) === 3;
     } else {
@@ -499,7 +538,7 @@ class TicTacToeGame {
   _checkRow(moveRC) {
     let row = 0;
     for (let i = 0; i < 3; i++) {
-      row += this._board.played[moveRC[0]][i];
+      row += this.board.played[moveRC[0]][i];
     }
     return Math.abs(row) === 3;
   }
@@ -507,7 +546,7 @@ class TicTacToeGame {
   _checkColumn(moveRC) {
     let col = 0;
     for (let i = 0; i < 3; i++){
-      col += this._board.played[i][moveRC[1]];
+      col += this.board.played[i][moveRC[1]];
     }
     return Math.abs(col) === 3;
   }
@@ -518,7 +557,7 @@ class TicTacToeGame {
   }
 
   _winSequence(moveRC, won) {
-    this._board.won(...this._wonRC(moveRC, won));
+    this.board.won(...this._wonRC(moveRC, won));
     document.getElementById('gameMsg').innerHTML = 'You won! ' + won;
   }
 
