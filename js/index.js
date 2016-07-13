@@ -236,6 +236,7 @@ class TicTacToeBoard {
     this._isCross = true; // Cross plays first
     // Init the board
     this._initBoard(callback);
+    this.moves = 0;
   }
 
   _initBoard(callback) {
@@ -301,9 +302,11 @@ class TicTacToeBoard {
     }
     this.played[r][c] = this._isCross ? 1 : -1;
     this._isCross = !this._isCross;
+    this.moves++;
   }
 
   won(startRC, endRC) {
+    this._disableClick();
     let bStart = this._board.topCorner,
       bEnd = this._board.bottomCorner,
       l;
@@ -325,6 +328,10 @@ class TicTacToeBoard {
     this._chalkify(l.addPathToSvg(this.svg));
     l.draw();
     return;
+  }
+
+  draw() {
+    this._disableClick();
   }
 
   _chalkify(path) {
@@ -352,15 +359,16 @@ class TicTacToeBoard {
 }
 
 class Player {
-  constructor (game) {
+  constructor (game, id) {
     this._game = game;
     this._moveRC = [];
+    this.id = id; // THe player's id 1 for cross, -1 for nought
   }
 }
 
 class HumanPlayer extends Player {
-  constructor(game) {
-    super(game);
+  constructor(game, id) {
+    super(game, id);
   }
 
   // Returns a move from the board
@@ -379,9 +387,9 @@ class HumanPlayer extends Player {
 Inspired by http://http://neverstopbuilding.com/minimax
 The main difference is that the player doesn't affect the current game.
 It just uses the rules of the TicTacToeGame class */
-class ComputerPlayer extends Player {
-  constructor(game) {
-    super(game);
+class MinimaxComputerPlayer extends Player {
+  constructor(game, id) {
+    super(game, id);
   }
 
   get moveRC() {
@@ -390,36 +398,90 @@ class ComputerPlayer extends Player {
 
   // Play seqquence
   play() {
-    this._minimaxInit();
+    this._initPlay();
     this._simulateClick();
   }
 
-  // Scoring
-  _score(isPlayerMe, depth) {
-    let isWon = this._game.winningPattern(this._moveRC);
-    if (isWon) {
-      if (isPlayerMe) {
-        return 10 - depth;
-      } else {
-        return depth - 10;
-      }
+  _initPlay() {
+    if (this._game.board.moves === 0) {
+      this._moveRC = [1, 1];
     } else {
-      return 0;
+      this._minimax(this.id, []);
     }
   }
 
-  // Minimax algorithm returning a moveRC array
-  _minimaxInit () {
-    let moveRC = [],
-      played = this._game.board.played,
-      win = this._game.winningPattern;
-    // DEBUG Random play from computer
-    for (let i = 0, r = played.length; i < r; i++) {
-      for (let j = 0, c = played[i].length; j < c; j++){
+  _isFirstMove() {
+
+  }
+
+  // Minimax algorithm returning a score
+  _minimax(turn, history) {
+    let played = this._updateGame(history),
+      depth = history.length,
+      winner = TicTacToeGame.winner(played),
+      isGameOver = TicTacToeGame.isDraw(played) || winner !== 0,
+      scores = [],
+      moves = [];
+
+    if (isGameOver) {
+      return this._score(winner, depth);
+    }
+    // Explore all the next moves
+    moves = this._getAvailableMoves(played);
+    for (let i = 0, l = moves.length; i < l; i++) {
+      scores.push(this._minimax(-turn, history.concat([moves[i]])));
+    }
+
+    if (this.id == turn) {
+      // Return the max score
+      let maxScore = Math.max(...scores);
+      if (depth === 0) {
+        // We've found the best move
+        this._moveRC = moves[scores.indexOf(maxScore)];
+      }
+      return maxScore;
+    } else {
+      // Return the min score
+      return Math.min(...scores);
+    }
+  }
+
+  _getAvailableMoves(played) {
+    let s = played.length,
+      moves = [];
+    for (let i = 0; i < s; i++) {
+      for (let j= 0; j < s; j++) {
         if (played[i][j] === 0) {
-          this._moveRC = [i, j];
+          moves.push([i, j]);
         }
       }
+    }
+    return moves;
+  }
+
+  // Note: either you must construct or deconstruct the game every time
+  _updateGame(history) {
+    // Cloning the board - Important to avoid messing up the board :o)
+    let s = this._game.board.played.length,
+      played = [],
+      turn = this.id;
+    for (let i = 0; i < s; i++) {
+      played[i] = this._game.board.played[i].slice(0);
+    }
+    for (let i = 0, l = history.length; i < l; i++) {
+      played[history[i][0]][history[i][1]] = turn;
+      turn = -turn;
+    }
+    return played;
+  }
+
+  // Calculates the score depending on the winner state: 0, draw, 1, cross, -1, nought.
+  _score(winner, depth) {
+    if (winner === 0) {
+        return 0;
+    } else {
+      // Returns a negative score if the player and the winner are different (depth is a max of 9)
+      return (10 - depth) * winner * this.id;
     }
   }
 
@@ -435,11 +497,48 @@ class ComputerPlayer extends Player {
   }
 }
 
+class RandomComputerPlayer extends Player {
+  constructor(game, id) {
+    super(game, id);
+  }
+
+  get moveRC() {
+    return this._moveRC;
+  }
+
+  // Play seqquence
+  play() {
+    this._playRandomMove();
+    this._simulateClick();
+  }
+
+  _playRandomMove() {
+    let i, j;
+    do {
+      i = Math.floor(Math.random() * 3);
+      j = Math.floor(Math.random() * 3);
+    } while (this._game.board.played[i][j] !== 0);
+    this._moveRC = [i, j];
+  }
+
+  // To indicate that the computer has 'played'
+  _simulateClick() {
+    let evt = new MouseEvent("click", {
+      bubbles: true,
+      cancelable: true,
+      view: window,
+    });
+    let cb = this._game.board.svg.node();
+    cb.dispatchEvent(evt);
+  }
+}
+
+
 class TicTacToeGame {
   constructor() {
     this._player = [];
-    this._player[0] = new HumanPlayer(this);
-    this._player[1] = new ComputerPlayer(this);
+    this._player[0] = new HumanPlayer(this, 1);
+    this._player[1] = new MinimaxComputerPlayer(this, -1);
     this._currentPlayer = 0; // Value 0 or 1
     // Start first turn
     this.board = new TicTacToeBoard(() => {this._turn();});
@@ -481,11 +580,11 @@ class TicTacToeGame {
     }
   }
 
-  // Check if it's a draw knowing it's not a win
-  _isDraw() {
-    for (let i = 0, r = this.board.played.length; i < r; i++) {
-      for (let j = 0, c = this.board.played[i].length; j < c; j++) {
-        if (this.board.played[i][j] === 0) {
+  // Returns true if there's no more space to play on the board
+  static isDraw(played) {
+    for (let i = 0, r = played.length; i < r; i++) {
+      for (let j = 0, c = played[i].length; j < c; j++) {
+        if (played[i][j] === 0) {
           return false;
         }
       }
@@ -493,29 +592,57 @@ class TicTacToeGame {
     return true;
   }
 
+  _isDraw() {
+    return TicTacToeGame.isDraw(this.board.played);
+  }
+
+  // Returns +1 or -1 if there's a winner, 0 if there isn't
+  static winner(played) {
+    let size = played.length; // Assumes square
+    for (let i = 0; i < size; i++) {
+      // Row
+      if (this.isWinRow([i, 0], played)) {
+        return played[i][0];
+      }
+      // column
+      if (this.isWinColumn([0, i], played)) {
+        return played[0][i];
+      }
+    }
+    // 1st diagonal
+    if (this.isWinDiagonal1([0, 0], played)) {
+      return played[0][0];
+    }
+    if (this.isWinDiagonal2([size - 1, 0], played)) {
+      return played[size - 1][0];
+    }
+    // No win
+    return 0;
+  }
+
   // Returns whether the win is a row (r), a diagonal (d1 or d2) or a column (c) or not winning (empty string)
   winningPattern(moveRC) {
-    if (this._checkDiagonal1(moveRC)) {
+    if (this._isWinDiagonal1(moveRC)) {
       return 'd1';
     }
-    if (this._checkDiagonal2(moveRC)) {
+    if (this._isWinDiagonal2(moveRC)) {
       return 'd2';
     }
-    if (this._checkRow(moveRC)) {
+    if (this._isWinRow(moveRC)) {
       return 'r';
     }
-    if (this._checkColumn(moveRC)) {
+    if (this._isWinColumn(moveRC)) {
         return 'c';
     }
     // Not won
     return '';
   }
 
-  _checkDiagonal1(moveRC) {
+  static isWinDiagonal1(moveRC, played) {
     if (moveRC[0] === moveRC[1]) {
       let diag1 = 0;
       for (let i = 0; i < 3; i++) {
-        diag1 += this.board.played[i][i];
+        diag1 += played[i][i];
         }
       return Math.abs(diag1) === 3;
     } else {
@@ -523,11 +650,15 @@ class TicTacToeGame {
     }
   }
 
-  _checkDiagonal2(moveRC) {
+  _isWinDiagonal1(moveRC) {
+    return TicTacToeGame.isWinDiagonal1(moveRC, this.board.played);
+  }
+
+  static isWinDiagonal2(moveRC, played) {
     if (moveRC[0] === (2 - moveRC[1])) {
       let diag2 = 0;
       for (let i = 0; i < 3; i++) {
-        diag2 += this.board.played[i][2 - i];
+        diag2 += played[i][2 - i];
       }
       return Math.abs(diag2) === 3;
     } else {
@@ -535,30 +666,43 @@ class TicTacToeGame {
     }
   }
 
-  _checkRow(moveRC) {
+  _isWinDiagonal2(moveRC) {
+    return TicTacToeGame.isWinDiagonal2(moveRC, this.board.played);
+  }
+
+  static isWinRow(moveRC, played) {
     let row = 0;
     for (let i = 0; i < 3; i++) {
-      row += this.board.played[moveRC[0]][i];
+      row += played[moveRC[0]][i];
     }
     return Math.abs(row) === 3;
   }
 
-  _checkColumn(moveRC) {
+  _isWinRow(moveRC) {
+    return TicTacToeGame.isWinRow(moveRC, this.board.played);
+  }
+
+  static isWinColumn(moveRC, played) {
     let col = 0;
     for (let i = 0; i < 3; i++){
-      col += this.board.played[i][moveRC[1]];
+      col += played[i][moveRC[1]];
     }
     return Math.abs(col) === 3;
   }
 
+  _isWinColumn(moveRC) {
+    return TicTacToeGame.isWinColumn(moveRC, this.board.played);
+  }
+
   _drawSequence() {
-    document.getElementById('gameMsg').innerHTML = "It's a draw!";
+    this.board.draw();
+    document.getElementById('gameMsg').innerHTML = "It's a draw! " + TicTacToeGame.winner(this.board.played);
 
   }
 
   _winSequence(moveRC, won) {
     this.board.won(...this._wonRC(moveRC, won));
-    document.getElementById('gameMsg').innerHTML = 'You won! ' + won;
+    document.getElementById('gameMsg').innerHTML = 'You won! ' + TicTacToeGame.winner(this.board.played);
   }
 
   // Returns an array of startRC and stopRC giving the start and end square of the winning pattern
