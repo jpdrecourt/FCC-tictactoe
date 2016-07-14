@@ -1,14 +1,51 @@
 // Start of Tic Tac Toe JS
 'use strict';
 
+class ImperfectPath {
+  constructor(delta) {
+    this._delta = delta;
+    this._path = undefined;
+    this._pathDef = '';
+  }
+
+  get path() {return this._path;}
+
+  // Random value between -delta/2 and +delta/2 - But not too small
+  _rnd() {
+    return this._delta * (-0.5 + (Math.random() + 0.2) / 1.2);
+  }
+
+  // Add the path to an svg and hides it - Offset controls the length of the path
+  addPathToSvg(svg, offset = 10) {
+    if (this._path !== undefined) {
+      throw("Error: Path already added to an svg");
+    }
+    this._path = svg.append('path')
+      .attr('d', this._pathDef)
+      .attr('transform', this._transformPath())
+      .attr('stroke-dasharray', offset)
+      .attr('stroke-dashoffset', offset);
+    return this._path;
+  }
+
+  // Draws the path over t ms.
+  draw(t) {
+    return this._path.transition()
+      .duration(400)
+      .ease('linear')
+      .attr('stroke-dashoffset', 0);
+  }
+}
+
 /* Imperfect circle using 4 cubic Bezier curves
 Inspired by http://bl.ocks.org/patricksurry/11087975
 Constructor parameter:
   x, y: Coordinates of the circle (default to 0)
   r: radius of the circle (default to 1)
 */
-class ImperfectCirclePath {
-  constructor(x = 0, y = 0, r = 1) {
+class ImperfectCirclePath extends ImperfectPath {
+  constructor(x = 0, y = 0, r = 1, delta = 1) {
+    super(delta);
     this._x = x;
     this._y = y;
     this._r = r;
@@ -17,41 +54,20 @@ class ImperfectCirclePath {
     this._dTheta = 0.2;
     this._ratio = 0.9;
     this._angle = Math.PI * Math.random();
-    this._path = undefined;
-  }
-  get x() {return this._x;}
-  get y() {return this._y;}
-  get r() {return this._y;}
-  get path() {return this._path;}
-
-  /* Appends the path to a d3 svg selector an returns that path */
-  addPathToSvg(svg) {
-    if (this._path !== undefined) {
-      throw("Error: Path already added to an svg");
-    }
-    this._path = svg.append('path')
-      .attr('d', this._imperfectCirclePath())
-      .attr('transform', this._transformPath())
-      .attr('stroke-dasharray', 10)
-      .attr('stroke-dashoffset', 10);
-    return this._path;
+    this._pathDef = this._imperfectCircle();
   }
 
-  draw() {
-    return this._path.transition()
-      .duration(400)
-      .ease('linear')
-      .attr('stroke-dashoffset', 0);
+  draw(t=400) {
+    return super.draw(t);
   }
 
-  _imperfectCirclePath() {
+  _imperfectCircle() {
     const c = 0.551915024494,
       beta = Math.atan(c),
       d = Math.sqrt(c * c + 1 * 1);
     let r = 1,
       theta = this._thetaStart,
-      path = 'M',
-      randomFn = Math.random;
+      path = 'M';
 
     // Move to P0
     path += [r * Math.sin(theta), r * Math.cos(theta)];
@@ -61,9 +77,9 @@ class ImperfectCirclePath {
     // For each quarter turn
     for (let i = 0; i < 4; i++) {
       // Angle overshoot/undershoot
-      theta += Math.PI / 2 * (1 + randomFn() * this._dTheta);
+      theta += Math.PI / 2 * (1 + Math.random() * this._dTheta);
       // Radius overshoot/undershoot
-      r *= (1 + randomFn() * this._dR);
+      r *= (1 + Math.random() * this._dR);
       // Control point P2
       path += ' ' + (i ? 'S' : '') + [d * r * Math.sin(theta - beta),
         d * r * Math.cos(theta - beta)
@@ -85,53 +101,33 @@ Constructor parameter:
  x0, y0: Coordinates of the origin (default to [0, 0])
  x0, y0: Coordinates of the end (default to [1, 0])
 */
-class ImperfectLinePath {
-  constructor (x0=0, y0=0, x1=1, y1=0) {
+class ImperfectLinePath extends ImperfectPath {
+  constructor (x0=0, y0=0, x1=1, y1=0, delta=0.6) {
+    super(delta);
     this._x0 = x0;
     this._y0 = y0;
     this._x1 = x1;
     this._y1 = y1;
-    this._startAngle = 0.1 + this._rndSign() * 0.1 * Math.random();
-    this._endAngle = 0.1 + this._rndSign() * 0.1 * Math.random();
-    this._xMid = -0.2 + 0.2 * Math.random();
-    this._path = undefined;
+    this._pathDef = this._imperfectLine();
   }
 
-  get x0() {return this._x0;}
-  get y0() {return this._y0;}
-  get x1() {return this._x1;}
-  get y1() {return this._y1;}
-  get path() {return this._path;}
-
-  /* Appends the path to a d3 svg selector and returns the path */
-  addPathToSvg(svg) {
-    if (this._path !== undefined) {
-      throw("Error: Path already added to an svg");
-    }
-    this._path = svg.append('path')
-      .attr('d', this._imperfectLine())
-      .attr('transform', this._transformPath())
-      .attr('stroke-dasharray', 10)
-      .attr('stroke-dashoffset', 10);
-    return this._path;
-  }
-
-  draw() {
-    return this._path.transition()
-      .duration(300)
-      .ease('linear')
-      .attr('stroke-dashoffset', 0);
+  draw(t = 300) {
+    return super.draw(t);
   }
 
   /* Imperfect horizontal line from [-1,0] to [1,0]
   Parameters: start and end angles in radians
   Return: d attribute of SVG path */
   _imperfectLine() {
+    let xP1 = this._rnd(),
+      xP2 = this._rnd(),
+      yP1 = this._rnd(),
+      yP2 = this._rnd();
     let path = 'M-1,0 C'; // The line starts at [-1, 0]
     // Control point P1
-    path += [this._xMid, (1 + this._xMid) * Math.tan(this._startAngle)];
+    path += [xP1, yP1];
     // Control point P2
-    path += ' ' + [this._xMid, (1 - this._xMid) * Math.tan(this._endAngle)];
+    path += ' ' + [xP2, yP2];
     // Control point P3
     path += ' ' + [1, 0];
     return path;
@@ -142,41 +138,25 @@ class ImperfectLinePath {
       angle = Math.acos((this._x1 - this._x0) / length) * 180 / Math.PI;
     return ` translate (${0.5 * (this._x0 + this._x1)}, ${0.5 * (this._y0 + this._y1)}) rotate (${angle}) scale(${length / 2}, 1)`;
   }
-
-  /* Return a positive or a negative sign */
-  _rndSign () {
-    return Math.random() < 0.5 ? -1 : 1;
-  }
 }
 
 /* Creates a cross - Default in square centered on 0 and of width of 2
 Constructor parameters: center and width of the bounding square */
-class ImperfectCrossPath {
+class ImperfectCrossPath extends ImperfectPath {
   constructor(x=0, y=0, w=2, delta=0.6) {
+    super(delta);
     this._x = x;
     this._y = y;
     this._w = w;
-    this._path = undefined;
     this._yMidStart = delta * (-0.5 + Math.random());
     this._yMidEnd = delta * (-0.5 + Math.random());
     this._xMidStart = delta * (-0.5 + Math.random());
     this._xMidEnd = delta * (-0.5 + Math.random());
+    this._pathDef = this._imperfectCross();
   }
 
-  get x() {return this._x;}
-  get y() {return this._y;}
-  get w() {return this._w;}
-  get path() {return this._path;}
-
   addPathToSvg(svg) {
-    if (this._path !== undefined) {
-      throw("Error: Path already added to an svg");
-    }
-    this._path = svg.append('path')
-      .attr('d', this._imperfectCross())
-      .attr('transform', this._transformPath())
-      .attr('stroke-dasharray', 10)
-      .attr('stroke-dashoffset', 10);
+    super.addPathToSvg(svg);
     // Hide the junction line and create a symmetric effect on the right
     // This only works when the background color is known.
     svg.append('path')
@@ -187,28 +167,33 @@ class ImperfectCrossPath {
     return this._path;
   }
 
-  draw() {
-    return this._path.transition()
-      .duration(500)
-      .ease('linear')
-      .attr('stroke-dashoffset', 0);
+  draw(t=500) {
+    return super.draw(t);
   }
 
   _imperfectCross() {
+    let xP11 = this._rnd(),
+      yP11 = this._rnd(),
+      xP21 = this._rnd(),
+      yP21 = this._rnd(),
+      xP12 = this._rnd(),
+      yP12 = this._rnd(),
+      xP22 = this._rnd(),
+      yP22 = this._rnd();
     // First stroke - P0
     let path = 'M1,-1 C';
     // First stroke - P1
-    path += [0, this._yMidStart];
+    path += [xP11, yP11];
     // First stroke - P2
-    path += ' ' + [0, this._yMidEnd];
+    path += ' ' + [xP21, yP21];
     // First stroke - P3
     path += ' ' + [-1, 1];
     // Second stroke - P0 - Junction line essential for the look of the stroke
     path += ' L-1,-1 C';
     // Second stroke - P1
-    path += [this._xMidStart, 0];
+    path += [xP12, yP12];
     // Second stroke - P2
-    path += ' ' + [ this._xMidEnd, 0];
+    path += ' ' + [xP22, yP22];
     // Second stroke - P3
     path += ' ' + [1, 1];
     return path;
@@ -306,6 +291,10 @@ class TicTacToeBoard {
   }
 
   won(startRC, endRC) {
+    // Wobbles the origins
+    function wobbly(val) {
+      return val * (0.85 + 0.15 * Math.random());
+    }
     this._disableClick();
     let bStart = this._board.topCorner,
       bEnd = this._board.bottomCorner,
@@ -313,17 +302,17 @@ class TicTacToeBoard {
     if (startRC[0] == endRC[0]) {
       // The win is a row
       let aStart = this._board.topCorner + (startRC[0] + 0.5) * this._board.boxWidth;
-      l = new ImperfectLinePath(bStart, aStart, bEnd, aStart);
+      l = new ImperfectLinePath(wobbly(bStart), wobbly(aStart), wobbly(bEnd), wobbly(aStart));
     } else if (startRC[1] == endRC[1]) {
       // The win is a column
       let aStart = this._board.topCorner + (startRC[1] + 0.5) * this._board.boxWidth;
-      l = new ImperfectLinePath(aStart, bStart, aStart, bEnd);
+      l = new ImperfectLinePath(wobbly(aStart), wobbly(bStart), wobbly(aStart), wobbly(bEnd));
     } else if (startRC[0] == startRC[1] && endRC[0] == endRC[1]) {
       // The win is the first diagonal
-      l = new ImperfectLinePath(bStart, bStart, bEnd, bEnd);
+      l = new ImperfectLinePath(wobbly(bStart), wobbly(bStart), wobbly(bEnd), wobbly(bEnd));
     } else {
       // The win is the second diagonal
-      l = new ImperfectLinePath(bEnd, bStart, bStart, bEnd);
+      l = new ImperfectLinePath(wobbly(bEnd), wobbly(bStart), wobbly(bStart), wobbly(bEnd));
     }
     this._chalkify(l.addPathToSvg(this.svg));
     l.draw();
@@ -533,11 +522,10 @@ class RandomComputerPlayer extends Player {
   }
 }
 
-
 class TicTacToeGame {
   constructor() {
     this._player = [];
-    this._player[0] = new HumanPlayer(this, 1);
+    this._player[0] = new RandomComputerPlayer(this, 1);
     this._player[1] = new MinimaxComputerPlayer(this, -1);
     this._currentPlayer = 0; // Value 0 or 1
     // Start first turn
