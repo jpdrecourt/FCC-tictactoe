@@ -4,6 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <title>Tic Tac Toe</title>
+  <link href='https://fonts.googleapis.com/css?family=Permanent+Marker' rel='stylesheet' type='text/css'>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="stylesheet" href="css/style.css">
   <script src="node_modules/d3/d3.min.js"></script>
@@ -12,21 +13,23 @@
 <body>
   <!-- Start of Tic Tac Toe HTML -->
   <div id="gameMsg"></div>
-  <svg id="board" width="600" height="600" viewBox="-4.5 -4.5 9 9">
-    <defs>
-      <filter id="chalkTexture">
-        <feTurbulence result="TURBULENCE" type="fractalNoise" baseFrequency="0.1" numOctaves="10" seed="2" />
-        <feDisplacementMap in="SourceGraphic" in2="TURBULENCE" scale="1" result="raggedContour" />
-        <feTurbulence result="turbulenceMask" type="turbulence" baseFrequency="100" numOctaves="3" stitchTiles="stitch" seed="3" />
-        <feColorMatrix in="turbulenceMask" result="alphaMask" type="matrix" values="
+
+    <svg id="board" width="450" height="450" viewBox="-4.5 -4.5 9 9">
+      <defs>
+        <filter id="chalkTexture">
+          <feTurbulence result="TURBULENCE" type="fractalNoise" baseFrequency="0.1" numOctaves="10" seed="2" />
+          <feDisplacementMap in="SourceGraphic" in2="TURBULENCE" scale="1" result="raggedContour" />
+          <feTurbulence result="turbulenceMask" type="turbulence" baseFrequency="230" numOctaves="8" stitchTiles="stitch" seed="3" />
+          <feColorMatrix in="turbulenceMask" result="alphaMask" type="matrix" values="
     0 0 0 0 1
     0 0 0 0 1
     0 0 0 0 1
     0.3333 0.3333 0.3333 1 0" />
-        <feComposite in="alphaMask" in2="raggedContour" result="chalkPattern" operator="in" />
-      </filter>
-    </defs>
-  </svg>
+          <feComposite in="alphaMask" in2="raggedContour" result="chalkPattern" operator="in" />
+        </filter>
+      </defs>
+    </svg>
+    <svg id="ui" width="700" height="300" viewBox="-7 4.5 14 6">    </svg>
   <div id="mask"></div>
 
   <!-- <End> of Tic Tac Toe HTML -->

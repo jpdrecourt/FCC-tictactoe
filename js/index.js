@@ -29,11 +29,12 @@ class ImperfectPath {
   }
 
   // Draws the path over t ms.
-  draw(t) {
+  draw(t, renderCallback=() => {return;}) {
     return this._path.transition()
-      .duration(400)
+      .duration(t)
       .ease('linear')
-      .attr('stroke-dashoffset', 0);
+      .attr('stroke-dashoffset', 0)
+      .each('end', renderCallback);
   }
 }
 
@@ -57,15 +58,15 @@ class ImperfectCirclePath extends ImperfectPath {
     this._pathDef = this._imperfectCircle();
   }
 
-  draw(t=400) {
-    return super.draw(t);
+  draw(t=400, renderCallback=undefined) {
+    return super.draw(t, renderCallback);
   }
 
   _imperfectCircle() {
     const c = 0.551915024494,
       beta = Math.atan(c),
       d = Math.sqrt(c * c + 1 * 1);
-    let r = 1,
+    let r = this._r,
       theta = this._thetaStart,
       path = 'M';
 
@@ -111,8 +112,8 @@ class ImperfectLinePath extends ImperfectPath {
     this._pathDef = this._imperfectLine();
   }
 
-  draw(t = 300) {
-    return super.draw(t);
+  draw(t = 300, renderCallback=undefined) {
+    return super.draw(t, renderCallback);
   }
 
   /* Imperfect horizontal line from [-1,0] to [1,0]
@@ -167,8 +168,8 @@ class ImperfectCrossPath extends ImperfectPath {
     return this._path;
   }
 
-  draw(t=500) {
-    return super.draw(t);
+  draw(t=500, renderCallback=undefined) {
+    return super.draw(t, renderCallback);
   }
 
   _imperfectCross() {
@@ -207,34 +208,33 @@ class ImperfectCrossPath extends ImperfectPath {
 /* Class dealing with the display of the Tic Tac Toe board */
 class TicTacToeBoard {
   // Callback when the board is drawn
-  constructor(callback) {
+  constructor(renderCallback) {
     // Init public variables
     this.svg = d3.select('#board');
     this.played = [[0, 0, 0], [0, 0, 0], [0, 0, 0]];
-    let viewBox = this.svg.attr('viewBox').split(' ').map(Number);
     // Init private variables
     this._mask = document.getElementById('mask');
     this._board = {};
-    this._board.topCorner = viewBox[0];
-    this._board.bottomCorner = viewBox[2] + this._board.topCorner;
-    this._board.boxWidth = (this._board.bottomCorner - this._board.topCorner) / 3;
+    this._board.topCorner = -4.5;
+    this._board.bottomCorner = 4.5;
+    this._board.boxWidth = 3;
     this._isCross = true; // Cross plays first
     // Init the board
-    this._initBoard(callback);
+    this._initBoard(renderCallback);
     this.moves = 0;
   }
 
-  _initBoard(callback) {
+  _initBoard(renderCallback) {
     this._disableClick();
     this._eraseBoard();
-    this._displayGrid(callback);
+    this._displayGrid(renderCallback);
   }
 
   _eraseBoard() {
 
   }
 
-  _displayGrid(callback) {
+  _displayGrid(renderCallback) {
     let firstLine = this._board.topCorner + this._board.boxWidth,
     secondLine = firstLine + this._board.boxWidth;
     this._board.lines = [];
@@ -246,15 +246,15 @@ class TicTacToeBoard {
     for (let i = 0; i < this._board.lines.length; i++) {
       this._chalkify(this._board.lines[i].addPathToSvg(this.svg));
     }
-    this._draw(0, callback);
+    this._draw(0, renderCallback);
   }
 
-  _draw(n, callback) {
+  _draw(n, renderCallback) {
     if (n < this._board.lines.length) {
-      return this._board.lines[n].draw().each("end", () => {this._draw(n + 1, callback);});
+      return this._board.lines[n].draw().each("end", () => {this._draw(n + 1, renderCallback);});
     } else {
       this._enableClick();
-      callback();
+      renderCallback();
     }
   }
 
@@ -275,7 +275,7 @@ class TicTacToeBoard {
 
 
   /* Play a nought or a cross at a given row and column (0 indexed)*/
-  play(moveRC, callback) {
+  play(moveRC, callback=this._renderCallback) {
     let r = moveRC[0], c = moveRC[1];
     this._disableClick();
     let x = this._board.topCorner + (c + 0.5) * this._board.boxWidth,
@@ -525,8 +525,8 @@ class RandomComputerPlayer extends Player {
 class TicTacToeGame {
   constructor() {
     this._player = [];
-    this._player[0] = new RandomComputerPlayer(this, 1);
-    this._player[1] = new MinimaxComputerPlayer(this, -1);
+    this._player[0] = new HumanPlayer(this, 1);
+    this._player[1] = new HumanPlayer(this, -1);
     this._currentPlayer = 0; // Value 0 or 1
     // Start first turn
     this.board = new TicTacToeBoard(() => {this._turn();});
@@ -719,4 +719,129 @@ class TicTacToeGame {
   }
 }
 
-let app = new TicTacToeGame();
+class TicTacToeInterface {
+  constructor() {
+    // TODO Change the on("click") to invisible rectangles.
+    this.svg = d3.select('#ui');
+    this._drawGrid(this.svg); // DEBUG
+    this.cross = new ImperfectCrossPath(-4, 6, 1);
+    this.cross.addPathToSvg(this.svg)
+      .attr('stroke', 'white')
+      .attr('fill', 'none')
+      .attr('stroke-width', 0.1)
+      .attr('filter', 'url(#chalkTexture)');
+    this.cross.draw(0);
+    this.nought = new ImperfectCirclePath(4, 6, 0.5);
+    this.nought.addPathToSvg(this.svg)
+      .attr('stroke', 'white')
+      .attr('fill', 'none')
+      .attr('stroke-width', 0.1)
+      .attr('filter', 'url(#chalkTexture)')
+      .on('click', () => {this._msg('Nought');});
+    this.nought.draw(0);
+    this.svg.append('rect')
+      .attr('id', 'crossClick')
+      .attr('x', '-5.5')
+      .attr('y', '5.2')
+      .attr('width', '3')
+      .attr('height', '1.7')
+      .attr('stroke', 'tranparent')
+      .attr('fill', 'white')
+      .on('click', () => {this._msg('Cross');});
+    this.svg.append('rect')
+      .attr('id', 'noughtClick')
+      .attr('x', '2.5')
+      .attr('y', '5.2')
+      .attr('width', '3')
+      .attr('height', '1.6')
+      .attr('stroke', 'tranparent')
+      .attr('fill', 'white')
+      .on('click', () => {this._msg('Nought');});
+    this.svg.append('text')
+      .attr('id', 'noughtHuman')
+      .attr('text-anchor', 'middle')
+      .attr('font-family', 'Permanent Marker')
+      .text('Human')
+      .attr('x', '-4')
+      .attr('y', '7.5')
+      .attr('font-size', '0.7')
+      .attr('fill', 'white')
+      .attr('filter', 'url(#chalkTexture)')
+      .on('click', () => {this._msg('Human cross');});
+    this.svg.append('text')
+      .attr('id', 'crossHuman')
+      .attr('text-anchor', 'middle')
+      .attr('font-family', 'Permanent Marker')
+      .text('Human')
+      .attr('x', '4')
+      .attr('y', '7.5')
+      .attr('font-size', '0.7')
+      .attr('fill', 'white')
+      .attr('filter', 'url(#chalkTexture)')
+      .on('click', () => {this._msg('Human nought');});
+    this.svg.append('text')
+      .attr('id', 'noughtComputer')
+      .attr('text-anchor', 'middle')
+      .attr('font-family', 'Permanent Marker')
+      .text('Computer')
+      .attr('x', '-4')
+      .attr('y', '8.5')
+      .attr('font-size', '0.7')
+      .attr('fill', 'white')
+      .attr('filter', 'url(#chalkTexture)')
+      .on('click', () => {this._msg('Computer cross');});
+    this.svg.append('text')
+      .attr('id', 'crossComputer')
+      .attr('text-anchor', 'middle')
+      .attr('font-family', 'Permanent Marker')
+      .text('Computer')
+      .attr('x', '4')
+      .attr('y', '8.5')
+      .attr('font-size', '0.7')
+      .attr('fill', 'white')
+      .attr('filter', 'url(#chalkTexture)')
+      .on('click', () => {this._msg('Computer nought');});
+
+
+    let game = new TicTacToeGame();
+  }
+
+  // DEBUG
+  _msg(text) {
+    document.getElementById('gameMsg').innerHTML = text;
+  }
+  _drawGrid(svg) {
+    let viewBox = this.svg.attr('viewBox').split(' ').map(Number),
+      x0 = viewBox[0],
+      x1 = viewBox[0] + viewBox[2],
+      y0 = viewBox[1],
+      y1 = viewBox[1] + viewBox[3];
+    for (let x = x0; x < x1; x++) {
+      svg.append('path')
+        .attr('d', `M${x},${y0} L${x},${y1}`)
+        .attr('stroke', 'cyan')
+        .attr('stroke-width', 0.01);
+      svg.append('text')
+        .text(x)
+        .attr("x", x + 0.1)
+        .attr("y", y0 + 0.2)
+        .attr("font-size", 0.24)
+        .attr("fill", 'cyan');
+    }
+    for (let y = y0; y < y1; y++) {
+      svg.append('path')
+        .attr('d', `M${x0},${y} L${x1},${y}`)
+        .attr('stroke', 'cyan')
+        .attr('stroke-width', 0.01);
+      svg.append('text')
+        .text(y)
+        .attr("x", x0 + 0.1)
+        .attr("y", y - 0.2)
+        .attr("font-size", 0.24)
+        .attr("fill", 'cyan');
+    }
+  }
+
+}
+
+let app = new TicTacToeInterface();
