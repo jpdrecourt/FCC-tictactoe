@@ -19,7 +19,7 @@
         <filter id="chalkTexture">
           <feTurbulence result="TURBULENCE" type="fractalNoise" baseFrequency="0.1" numOctaves="10" seed="2" />
           <feDisplacementMap in="SourceGraphic" in2="TURBULENCE" scale="1" result="raggedContour" />
-          <feTurbulence result="turbulenceMask" type="turbulence" baseFrequency="230" numOctaves="8" stitchTiles="stitch" seed="3" />
+          <feTurbulence result="turbulenceMask" type="turbulence" baseFrequency="231" numOctaves="8" stitchTiles="stitch" seed="3" />
           <feColorMatrix in="turbulenceMask" result="alphaMask" type="matrix" values="
     0 0 0 0 1
     0 0 0 0 1
@@ -29,7 +29,7 @@
         </filter>
       </defs>
     </svg>
-    <svg id="ui" width="700" height="300" viewBox="-7 4.5 14 6">    </svg>
+    <svg id="ui" width="700" height="300" viewBox="-7 4.5 14 6"></svg>
   <div id="mask"></div>
 
   <!-- <End> of Tic Tac Toe HTML -->

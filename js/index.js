@@ -8,7 +8,9 @@ class ImperfectPath {
     this._pathDef = '';
   }
 
-  get path() {return this._path;}
+  get path() {
+    return this._path;
+  }
 
   // Random value between -delta/2 and +delta/2 - But not too small
   _rnd() {
@@ -18,7 +20,7 @@ class ImperfectPath {
   // Add the path to an svg and hides it - Offset controls the length of the path
   addPathToSvg(svg, offset = 10) {
     if (this._path !== undefined) {
-      throw("Error: Path already added to an svg");
+      throw ("Error: Path already added to an svg");
     }
     this._path = svg.append('path')
       .attr('d', this._pathDef)
@@ -29,7 +31,9 @@ class ImperfectPath {
   }
 
   // Draws the path over t ms.
-  draw(t, renderCallback=() => {return;}) {
+  draw(t, renderCallback = () => {
+    return;
+  }) {
     return this._path.transition()
       .duration(t)
       .ease('linear')
@@ -58,7 +62,7 @@ class ImperfectCirclePath extends ImperfectPath {
     this._pathDef = this._imperfectCircle();
   }
 
-  draw(t=400, renderCallback=undefined) {
+  draw(t = 400, renderCallback = undefined) {
     return super.draw(t, renderCallback);
   }
 
@@ -103,7 +107,7 @@ Constructor parameter:
  x0, y0: Coordinates of the end (default to [1, 0])
 */
 class ImperfectLinePath extends ImperfectPath {
-  constructor (x0=0, y0=0, x1=1, y1=0, delta=0.6) {
+  constructor(x0 = 0, y0 = 0, x1 = 1, y1 = 0, delta = 0.6) {
     super(delta);
     this._x0 = x0;
     this._y0 = y0;
@@ -112,7 +116,7 @@ class ImperfectLinePath extends ImperfectPath {
     this._pathDef = this._imperfectLine();
   }
 
-  draw(t = 300, renderCallback=undefined) {
+  draw(t = 300, renderCallback = undefined) {
     return super.draw(t, renderCallback);
   }
 
@@ -144,7 +148,7 @@ class ImperfectLinePath extends ImperfectPath {
 /* Creates a cross - Default in square centered on 0 and of width of 2
 Constructor parameters: center and width of the bounding square */
 class ImperfectCrossPath extends ImperfectPath {
-  constructor(x=0, y=0, w=2, delta=0.6) {
+  constructor(x = 0, y = 0, w = 2, delta = 0.6) {
     super(delta);
     this._x = x;
     this._y = y;
@@ -168,7 +172,7 @@ class ImperfectCrossPath extends ImperfectPath {
     return this._path;
   }
 
-  draw(t=500, renderCallback=undefined) {
+  draw(t = 500, renderCallback = undefined) {
     return super.draw(t, renderCallback);
   }
 
@@ -211,7 +215,11 @@ class TicTacToeBoard {
   constructor(renderCallback) {
     // Init public variables
     this.svg = d3.select('#board');
-    this.played = [[0, 0, 0], [0, 0, 0], [0, 0, 0]];
+    this.played = [
+      [0, 0, 0],
+      [0, 0, 0],
+      [0, 0, 0]
+    ];
     // Init private variables
     this._mask = document.getElementById('mask');
     this._board = {};
@@ -236,7 +244,7 @@ class TicTacToeBoard {
 
   _displayGrid(renderCallback) {
     let firstLine = this._board.topCorner + this._board.boxWidth,
-    secondLine = firstLine + this._board.boxWidth;
+      secondLine = firstLine + this._board.boxWidth;
     this._board.lines = [];
     this._board.lines[0] = new ImperfectLinePath(this._board.topCorner, firstLine, this._board.bottomCorner, firstLine);
     this._board.lines[1] = new ImperfectLinePath(this._board.topCorner, secondLine, this._board.bottomCorner, secondLine);
@@ -251,7 +259,9 @@ class TicTacToeBoard {
 
   _draw(n, renderCallback) {
     if (n < this._board.lines.length) {
-      return this._board.lines[n].draw().each("end", () => {this._draw(n + 1, renderCallback);});
+      return this._board.lines[n].draw().each("end", () => {
+        this._draw(n + 1, renderCallback);
+      });
     } else {
       this._enableClick();
       renderCallback();
@@ -260,26 +270,33 @@ class TicTacToeBoard {
 
   /* Displays a nought at the x,y location */
   _displayNought(x, y, callback) {
-    let n = new ImperfectCirclePath(x, y);
-    this._chalkify(n.addPathToSvg(this.svg));
-    n.draw().each('end', () => {this._enableClick(); callback();});
-    return n;
-  }
-  /* Displays a cross at the x,y location */
+      let n = new ImperfectCirclePath(x, y);
+      this._chalkify(n.addPathToSvg(this.svg));
+      n.draw().each('end', () => {
+        this._enableClick();
+        callback();
+      });
+      return n;
+    }
+    /* Displays a cross at the x,y location */
   _displayCross(x, y, callback) {
     let c = new ImperfectCrossPath(x, y);
     this._chalkify(c.addPathToSvg(this.svg));
-    c.draw().each('end', () => {this._enableClick(); callback();});
+    c.draw().each('end', () => {
+      this._enableClick();
+      callback();
+    });
     return c;
   }
 
 
   /* Play a nought or a cross at a given row and column (0 indexed)*/
-  play(moveRC, callback=this._renderCallback) {
-    let r = moveRC[0], c = moveRC[1];
+  play(moveRC, callback = this._renderCallback) {
+    let r = moveRC[0],
+      c = moveRC[1];
     this._disableClick();
     let x = this._board.topCorner + (c + 0.5) * this._board.boxWidth,
-    y = this._board.topCorner + (r + 0.5) * this._board.boxWidth;
+      y = this._board.topCorner + (r + 0.5) * this._board.boxWidth;
     if (this._isCross) {
       this._displayCross(x, y, callback);
     } else {
@@ -325,9 +342,9 @@ class TicTacToeBoard {
 
   _chalkify(path) {
     path.attr('filter', 'url(#chalkTexture)')
-    .attr('fill', 'none')
-    .attr('stroke', 'white')
-    .attr('stroke-width', '0.1');
+      .attr('fill', 'none')
+      .attr('stroke', 'white')
+      .attr('stroke-width', '0.1');
     return path;
   }
 
@@ -348,7 +365,7 @@ class TicTacToeBoard {
 }
 
 class Player {
-  constructor (game, id) {
+  constructor(game, id) {
     this._game = game;
     this._moveRC = [];
     this.id = id; // THe player's id 1 for cross, -1 for nought
@@ -439,7 +456,7 @@ class MinimaxComputerPlayer extends Player {
     let s = played.length,
       moves = [];
     for (let i = 0; i < s; i++) {
-      for (let j= 0; j < s; j++) {
+      for (let j = 0; j < s; j++) {
         if (played[i][j] === 0) {
           moves.push([i, j]);
         }
@@ -467,7 +484,7 @@ class MinimaxComputerPlayer extends Player {
   // Calculates the score depending on the winner state: 0, draw, 1, cross, -1, nought.
   _score(winner, depth) {
     if (winner === 0) {
-        return 0;
+      return 0;
     } else {
       // Returns a negative score if the player and the winner are different (depth is a max of 9)
       return (10 - depth) * winner * this.id;
@@ -529,12 +546,16 @@ class TicTacToeGame {
     this._player[1] = new HumanPlayer(this, -1);
     this._currentPlayer = 0; // Value 0 or 1
     // Start first turn
-    this.board = new TicTacToeBoard(() => {this._turn();});
+    this.board = new TicTacToeBoard(() => {
+      this._turn();
+    });
   }
 
   // Run a turn of the game
   _turn() {
-    this.board.svg.on("click", () => {this._evalMove();});
+    this.board.svg.on("click", () => {
+      this._evalMove();
+    });
     this._player[this._currentPlayer].play();
   }
 
@@ -543,7 +564,9 @@ class TicTacToeGame {
     document.getElementById('gameMsg').innerHTML = '';
     let moveRC = this._player[this._currentPlayer].moveRC;
     if (this._isLegal(moveRC)) {
-      this.board.play(moveRC, () => {this._checkWin(moveRC);});
+      this.board.play(moveRC, () => {
+        this._checkWin(moveRC);
+      });
     } else {
       document.getElementById('gameMsg').innerHTML = 'Illegal move, try again';
       this._turn();
@@ -620,7 +643,7 @@ class TicTacToeGame {
       return 'r';
     }
     if (this._isWinColumn(moveRC)) {
-        return 'c';
+      return 'c';
     }
     // Not won
     return '';
@@ -631,7 +654,7 @@ class TicTacToeGame {
       let diag1 = 0;
       for (let i = 0; i < 3; i++) {
         diag1 += played[i][i];
-        }
+      }
       return Math.abs(diag1) === 3;
     } else {
       return false;
@@ -672,7 +695,7 @@ class TicTacToeGame {
 
   static isWinColumn(moveRC, played) {
     let col = 0;
-    for (let i = 0; i < 3; i++){
+    for (let i = 0; i < 3; i++) {
       col += played[i][moveRC[1]];
     }
     return Math.abs(col) === 3;
@@ -700,7 +723,7 @@ class TicTacToeGame {
     switch (won) {
       case 'd1':
         startRC = [0, 0];
-        stopRC = [2 ,2];
+        stopRC = [2, 2];
         break;
       case 'd2':
         startRC = [0, 2];
@@ -721,89 +744,191 @@ class TicTacToeGame {
 
 class TicTacToeInterface {
   constructor() {
-    // TODO Change the on("click") to invisible rectangles.
     this.svg = d3.select('#ui');
     this._drawGrid(this.svg); // DEBUG
-    this.cross = new ImperfectCrossPath(-4, 6, 1);
+    this._displayInterface();
+    this._createUI();
+  }
+
+  _displayInterface() {
+    this.cross = new ImperfectCrossPath(-1.3, 7.8, 1);
     this.cross.addPathToSvg(this.svg)
       .attr('stroke', 'white')
       .attr('fill', 'none')
       .attr('stroke-width', 0.1)
       .attr('filter', 'url(#chalkTexture)');
     this.cross.draw(0);
-    this.nought = new ImperfectCirclePath(4, 6, 0.5);
+    // Cross Human
+    this.svg.append('text')
+      .attr('text-anchor', 'middle')
+      .attr('font-family', 'Permanent Marker')
+      .text('Human')
+      .attr('x', '-4.5')
+      .attr('y', '7.4')
+      .attr('font-size', '0.7')
+      .attr('fill', 'white')
+      .attr('filter', 'url(#chalkTexture)');
+    // Cross computer
+    this.svg.append('text')
+      .attr('text-anchor', 'middle')
+      .attr('font-family', 'Permanent Marker')
+      .text('Computer')
+      .attr('x', '4.5')
+      .attr('y', '8.5')
+      .attr('font-size', '0.7')
+      .attr('fill', 'white')
+      .attr('filter', 'url(#chalkTexture)');
+      // Slider cross
+    this._slider(-4.5, 9.5, 3.5, 'sliderClickCross');
+
+    this.nought = new ImperfectCirclePath(1.3, 7.8, 0.5);
     this.nought.addPathToSvg(this.svg)
-      .attr('stroke', 'white')
-      .attr('fill', 'none')
-      .attr('stroke-width', 0.1)
-      .attr('filter', 'url(#chalkTexture)')
-      .on('click', () => {this._msg('Nought');});
+    .attr('stroke', 'white')
+    .attr('fill', 'none')
+    .attr('stroke-width', 0.1)
+    .attr('filter', 'url(#chalkTexture)');
     this.nought.draw(0);
-    this.svg.append('rect')
-      .attr('id', 'crossClick')
-      .attr('x', '-5.5')
-      .attr('y', '5.2')
-      .attr('width', '3')
-      .attr('height', '1.7')
-      .attr('stroke', 'tranparent')
-      .attr('fill', 'white')
-      .on('click', () => {this._msg('Cross');});
-    this.svg.append('rect')
-      .attr('id', 'noughtClick')
-      .attr('x', '2.5')
-      .attr('y', '5.2')
-      .attr('width', '3')
-      .attr('height', '1.6')
-      .attr('stroke', 'tranparent')
-      .attr('fill', 'white')
-      .on('click', () => {this._msg('Nought');});
+    // Nought human
     this.svg.append('text')
-      .attr('id', 'noughtHuman')
       .attr('text-anchor', 'middle')
       .attr('font-family', 'Permanent Marker')
       .text('Human')
-      .attr('x', '-4')
-      .attr('y', '7.5')
+      .attr('x', '4.5')
+      .attr('y', '7.4')
       .attr('font-size', '0.7')
       .attr('fill', 'white')
-      .attr('filter', 'url(#chalkTexture)')
-      .on('click', () => {this._msg('Human cross');});
+      .attr('filter', 'url(#chalkTexture)');
+    // Nought computer
     this.svg.append('text')
-      .attr('id', 'crossHuman')
-      .attr('text-anchor', 'middle')
-      .attr('font-family', 'Permanent Marker')
-      .text('Human')
-      .attr('x', '4')
-      .attr('y', '7.5')
-      .attr('font-size', '0.7')
-      .attr('fill', 'white')
-      .attr('filter', 'url(#chalkTexture)')
-      .on('click', () => {this._msg('Human nought');});
-    this.svg.append('text')
-      .attr('id', 'noughtComputer')
       .attr('text-anchor', 'middle')
       .attr('font-family', 'Permanent Marker')
       .text('Computer')
-      .attr('x', '-4')
+      .attr('x', '-4.5')
       .attr('y', '8.5')
       .attr('font-size', '0.7')
       .attr('fill', 'white')
-      .attr('filter', 'url(#chalkTexture)')
-      .on('click', () => {this._msg('Computer cross');});
+      .attr('filter', 'url(#chalkTexture)');
+    // Message
     this.svg.append('text')
-      .attr('id', 'crossComputer')
+      .attr('id', 'message')
       .attr('text-anchor', 'middle')
       .attr('font-family', 'Permanent Marker')
-      .text('Computer')
-      .attr('x', '4')
-      .attr('y', '8.5')
+      .text('Select opponents')
+      .attr('x', '0')
+      .attr('y', '6')
       .attr('font-size', '0.7')
       .attr('fill', 'white')
-      .attr('filter', 'url(#chalkTexture)')
-      .on('click', () => {this._msg('Computer nought');});
+      .attr('filter', 'url(#chalkTexture)');
+    this._slider(4.5, 9.5, 3.5, 'sliderClickNought');
+  }
+  // Creates a slider given its location centre and a width
+  _slider(x, y, width, uiID='', nSteps=4) {
+    let isMouseDown = false;
+    let xStart = x - width / 2;
+    let sliderGroup = this.svg.append('g');
+    let line = new ImperfectLinePath(xStart, y, xStart + width, y, 0);
+    line.addPathToSvg(sliderGroup);
+    line.draw(0);
+    // Notches
+    let space = width / (nSteps - 1);
+    let height = width / 20;
+    let notch;
+    for (let i = 0; i < nSteps; i++) {
+      notch = new ImperfectLinePath(xStart + i * space, y - height, xStart + i * space, y + height, 0);
+      notch.addPathToSvg(sliderGroup);
+      notch.draw(0);
+    }
+    // Cursor
+    let cursorGroup = sliderGroup.append("g");
+    let cursor = new ImperfectCirclePath(xStart, y, 1.5 * height, 0);
+    cursor.addPathToSvg(cursorGroup);
+    cursor.draw(0);
 
+    sliderGroup
+    .attr('stroke', 'white')
+    .attr('fill', 'none')
+    .attr('stroke-width', 0.1)
+    .attr('filter', 'url(#chalkTexture)');
+    // UI stuff
+    let clickable = this.svg.append('rect')
+      .attr('id', 'uiClick')
+      .attr('x', xStart - 0.4 * space)
+      .attr('y', y - 3 * height)
+      .attr('width', width + 0.8 * space)
+      .attr('height', 6*height)
+      .attr('stroke', 'transparent')
+      .attr('fill', 'transparent')
+      .on('mousemove', mouseMove)
+      .on('mousedown', () => {isMouseDown = true;})
+      .on('mouseup', () => {isMouseDown = false;});
 
-    let game = new TicTacToeGame();
+    function mouseMove(d, i) {
+      let mouseXY = d3.mouse(this);
+      if (isMouseDown && mouseXY[0] >= xStart && mouseXY[0] <= xStart + width) {
+        let xTrans = Math.round((mouseXY[0] - xStart) / space) * space;
+        cursorGroup.attr('transform', `translate (${xTrans} 0)`);
+        // cursorGroup.attr('transform', `translate (${mouseXY[0] - xStart} 0)`);
+      }
+    }
+  }
+
+  _createUI() {
+    this.svg.append('rect')
+    .attr('class', 'uiClick')
+    .attr('id', 'crossClick')
+    .attr('x', '-2.1')
+    .attr('y', '7')
+    .attr('width', '1.6')
+    .attr('height', '1.6');
+    this.svg.append('rect')
+    .attr('class', 'uiClick')
+    .attr('id', 'crossClickHuman')
+    .attr('x', '-6.5')
+    .attr('y', '6.8')
+    .attr('width', '4')
+    .attr('height', '1.05');
+    this.svg.append('rect')
+    .attr('class', 'uiClick')
+    .attr('id', 'crossClickComputer')
+    .attr('x', '-6.5')
+    .attr('y', '7.85')
+    .attr('width', '4')
+    .attr('height', '1.05');
+    this.svg.append('rect')
+    .attr('class', 'uiClick')
+    .attr('id', 'noughtClick')
+    .attr('x', '0.5')
+    .attr('y', '7')
+    .attr('width', '1.6')
+    .attr('height', '1.6');
+    this.svg.append('rect')
+    .attr('class', 'uiClick')
+    .attr('id', 'noughtClickHuman')
+    .attr('x', '2.5')
+    .attr('y', '6.8')
+    .attr('width', '4')
+    .attr('height', '1.05');
+    this.svg.append('rect')
+    .attr('class', 'uiClick')
+    .attr('id', 'noughtClickComputer')
+    .attr('x', '2.5')
+    .attr('y', '7.85')
+    .attr('width', '4')
+    .attr('height', '1.05');
+
+    let uiElements = d3.selectAll('.uiClick')
+    .attr('stroke', 'transparent')
+    .attr('stroke-width', 0.01)
+    .attr('fill', 'transparent')
+    .on('click', () => {
+      this._clickHandler(d3.event);
+    });
+
+  }
+
+  _clickHandler(event) {
+    console.log(event);
+    this._msg(event.toElement.id);
   }
 
   // DEBUG
@@ -811,7 +936,7 @@ class TicTacToeInterface {
     document.getElementById('gameMsg').innerHTML = text;
   }
   _drawGrid(svg) {
-    let viewBox = this.svg.attr('viewBox').split(' ').map(Number),
+    let viewBox = svg.attr('viewBox').split(' ').map(Number),
       x0 = viewBox[0],
       x1 = viewBox[0] + viewBox[2],
       y0 = viewBox[1],
@@ -845,3 +970,4 @@ class TicTacToeInterface {
 }
 
 let app = new TicTacToeInterface();
+let game = new TicTacToeGame();
