@@ -813,7 +813,7 @@ class TicTacToeInterface {
       .attr('id', 'message')
       .attr('text-anchor', 'middle')
       .attr('font-family', 'Permanent Marker')
-      .text('Select opponents')
+      .text('Select players')
       .attr('x', '0')
       .attr('y', '6')
       .attr('font-size', '0.7')
@@ -840,7 +840,7 @@ class TicTacToeInterface {
     }
     // Cursor
     let cursorGroup = sliderGroup.append("g");
-    let cursor = new ImperfectCirclePath(xStart, y, 1.5 * height, 0);
+    let cursor = new ImperfectCirclePath(xStart, y, 1.5 * height, 1);
     cursor.addPathToSvg(cursorGroup);
     cursor.draw(0);
 
@@ -858,17 +858,25 @@ class TicTacToeInterface {
       .attr('height', 6*height)
       .attr('stroke', 'transparent')
       .attr('fill', 'transparent')
-      .on('mousemove', mouseMove)
+      .on('click', snapCursor)
       .on('mousedown', () => {isMouseDown = true;})
-      .on('mouseup', () => {isMouseDown = false;});
+      .on('mouseup', () => {isMouseDown = false;})
+      .on('mousemove', mouseMove);
 
-    function mouseMove(d, i) {
+    function mouseMove() {
       let mouseXY = d3.mouse(this);
-      if (isMouseDown && mouseXY[0] >= xStart && mouseXY[0] <= xStart + width) {
-        let xTrans = Math.round((mouseXY[0] - xStart) / space) * space;
-        cursorGroup.attr('transform', `translate (${xTrans} 0)`);
-        // cursorGroup.attr('transform', `translate (${mouseXY[0] - xStart} 0)`);
+      if (isMouseDown) {
+        console.log('Mouse moving');
+        snapCursor(mouseXY);
       }
+    }
+
+    function snapCursor(mouseXY) {
+      if (mouseXY === undefined) {
+        mouseXY = d3.mouse(this);
+      }
+      let xTrans = Math.round((mouseXY[0] - xStart) / space) * space;
+      cursorGroup.attr('transform', `translate (${xTrans} 0)`);
     }
   }
 
