@@ -742,12 +742,76 @@ class TicTacToeGame {
   }
 }
 
+// Creates a slider given its location centre and a width
+class slider {
+  constructor(svg, x, y, width, uiID = '', nSteps = 4) {
+    this._svg = svg;
+    this._isMouseDown = false;
+    this._xStart = x - width / 2;
+    let sliderGroup = this._svg.append('g');
+    let line = new ImperfectLinePath(this._xStart, y, this._xStart + width, y, 0);
+    line.addPathToSvg(sliderGroup);
+    line.draw(0);
+    // Notches
+    this._space = width / (nSteps - 1);
+    let height = width / 20;
+    let notch;
+    for (let i = 0; i < nSteps; i++) {
+      notch = new ImperfectLinePath(this._xStart + i * this._space, y - height, this._xStart + i * this._space, y + height, 0);
+      notch.addPathToSvg(sliderGroup);
+      notch.draw(0);
+    }
+    // Cursor
+    this._cursorGroup = sliderGroup.append("g");
+    let cursor = new ImperfectCirclePath(this._xStart, y, 1.5 * height, 1);
+    cursor.addPathToSvg(this._cursorGroup);
+    cursor.draw(0);
+
+    sliderGroup
+      .attr('stroke', 'white')
+      .attr('fill', 'none')
+      .attr('stroke-width', 0.1)
+      .attr('filter', 'url(#chalkTexture)');
+    // UI stuff
+    let clickable = this._svg.append('rect')
+      .attr('id', 'uiClick')
+      .attr('x', this._xStart - 0.4 * this._space)
+      .attr('y', y - 3 * height)
+      .attr('width', width + 0.8 * this._space)
+      .attr('height', 6 * height)
+      .attr('stroke', 'transparent')
+      .attr('fill', 'transparent')
+      .on('click', () => {let self = this; this._snapCursor(self);})
+      .on('mousedown', () => {
+        this._isMouseDown = true;
+      })
+      .on('mouseup', () => {
+        this._isMouseDown = false;
+      })
+      .on('mousemove', () => {let self = this; this._mouseMove(self);});
+  }
+
+  _mouseMove(self) {
+    if (this._isMouseDown) {
+      this._snapCursor(self);
+    }
+  }
+
+  _snapCursor(self) {
+    let mouseXY = d3.mouse(self._svg.node());
+    let xTrans = Math.round((mouseXY[0] - self._xStart) / self._space) * self._space;
+    self._cursorGroup.attr('transform', `translate (${xTrans} 0)`);
+  }
+}
+
 class TicTacToeInterface {
   constructor() {
     this.svg = d3.select('#ui');
     this._drawGrid(this.svg); // DEBUG
     this._displayInterface();
     this._createUI();
+    this.noughtSlider = undefined;
+    this.crossSlider = undefined;
   }
 
   _displayInterface() {
@@ -778,15 +842,15 @@ class TicTacToeInterface {
       .attr('font-size', '0.7')
       .attr('fill', 'white')
       .attr('filter', 'url(#chalkTexture)');
-      // Slider cross
-    this._slider(-4.5, 9.5, 3.5, 'sliderClickCross');
+    // Slider cross
+    this.crossSlider = new slider(this.svg, -4.5, 9.5, 3.5, 'sliderClickCross');
 
     this.nought = new ImperfectCirclePath(1.3, 7.8, 0.5);
     this.nought.addPathToSvg(this.svg)
-    .attr('stroke', 'white')
-    .attr('fill', 'none')
-    .attr('stroke-width', 0.1)
-    .attr('filter', 'url(#chalkTexture)');
+      .attr('stroke', 'white')
+      .attr('fill', 'none')
+      .attr('stroke-width', 0.1)
+      .attr('filter', 'url(#chalkTexture)');
     this.nought.draw(0);
     // Nought human
     this.svg.append('text')
@@ -819,118 +883,60 @@ class TicTacToeInterface {
       .attr('font-size', '0.7')
       .attr('fill', 'white')
       .attr('filter', 'url(#chalkTexture)');
-    this._slider(4.5, 9.5, 3.5, 'sliderClickNought');
-  }
-  // Creates a slider given its location centre and a width
-  _slider(x, y, width, uiID='', nSteps=4) {
-    let isMouseDown = false;
-    let xStart = x - width / 2;
-    let sliderGroup = this.svg.append('g');
-    let line = new ImperfectLinePath(xStart, y, xStart + width, y, 0);
-    line.addPathToSvg(sliderGroup);
-    line.draw(0);
-    // Notches
-    let space = width / (nSteps - 1);
-    let height = width / 20;
-    let notch;
-    for (let i = 0; i < nSteps; i++) {
-      notch = new ImperfectLinePath(xStart + i * space, y - height, xStart + i * space, y + height, 0);
-      notch.addPathToSvg(sliderGroup);
-      notch.draw(0);
-    }
-    // Cursor
-    let cursorGroup = sliderGroup.append("g");
-    let cursor = new ImperfectCirclePath(xStart, y, 1.5 * height, 1);
-    cursor.addPathToSvg(cursorGroup);
-    cursor.draw(0);
-
-    sliderGroup
-    .attr('stroke', 'white')
-    .attr('fill', 'none')
-    .attr('stroke-width', 0.1)
-    .attr('filter', 'url(#chalkTexture)');
-    // UI stuff
-    let clickable = this.svg.append('rect')
-      .attr('id', 'uiClick')
-      .attr('x', xStart - 0.4 * space)
-      .attr('y', y - 3 * height)
-      .attr('width', width + 0.8 * space)
-      .attr('height', 6*height)
-      .attr('stroke', 'transparent')
-      .attr('fill', 'transparent')
-      .on('click', snapCursor)
-      .on('mousedown', () => {isMouseDown = true;})
-      .on('mouseup', () => {isMouseDown = false;})
-      .on('mousemove', mouseMove);
-
-    function mouseMove() {
-      let mouseXY = d3.mouse(this);
-      if (isMouseDown) {
-        console.log('Mouse moving');
-        snapCursor(mouseXY);
-      }
-    }
-
-    function snapCursor(mouseXY) {
-      if (mouseXY === undefined) {
-        mouseXY = d3.mouse(this);
-      }
-      let xTrans = Math.round((mouseXY[0] - xStart) / space) * space;
-      cursorGroup.attr('transform', `translate (${xTrans} 0)`);
-    }
+    this.noughtSlider = new slider(this.svg, 4.5, 9.5, 3.5, 'sliderClickNought');
   }
 
   _createUI() {
     this.svg.append('rect')
-    .attr('class', 'uiClick')
-    .attr('id', 'crossClick')
-    .attr('x', '-2.1')
-    .attr('y', '7')
-    .attr('width', '1.6')
-    .attr('height', '1.6');
+      .attr('class', 'uiClick')
+      .attr('id', 'crossClick')
+      .attr('x', '-2.1')
+      .attr('y', '7')
+      .attr('width', '1.6')
+      .attr('height', '1.6');
     this.svg.append('rect')
-    .attr('class', 'uiClick')
-    .attr('id', 'crossClickHuman')
-    .attr('x', '-6.5')
-    .attr('y', '6.8')
-    .attr('width', '4')
-    .attr('height', '1.05');
+      .attr('class', 'uiClick')
+      .attr('id', 'crossClickHuman')
+      .attr('x', '-6.5')
+      .attr('y', '6.8')
+      .attr('width', '4')
+      .attr('height', '1.05');
     this.svg.append('rect')
-    .attr('class', 'uiClick')
-    .attr('id', 'crossClickComputer')
-    .attr('x', '-6.5')
-    .attr('y', '7.85')
-    .attr('width', '4')
-    .attr('height', '1.05');
+      .attr('class', 'uiClick')
+      .attr('id', 'crossClickComputer')
+      .attr('x', '-6.5')
+      .attr('y', '7.85')
+      .attr('width', '4')
+      .attr('height', '1.05');
     this.svg.append('rect')
-    .attr('class', 'uiClick')
-    .attr('id', 'noughtClick')
-    .attr('x', '0.5')
-    .attr('y', '7')
-    .attr('width', '1.6')
-    .attr('height', '1.6');
+      .attr('class', 'uiClick')
+      .attr('id', 'noughtClick')
+      .attr('x', '0.5')
+      .attr('y', '7')
+      .attr('width', '1.6')
+      .attr('height', '1.6');
     this.svg.append('rect')
-    .attr('class', 'uiClick')
-    .attr('id', 'noughtClickHuman')
-    .attr('x', '2.5')
-    .attr('y', '6.8')
-    .attr('width', '4')
-    .attr('height', '1.05');
+      .attr('class', 'uiClick')
+      .attr('id', 'noughtClickHuman')
+      .attr('x', '2.5')
+      .attr('y', '6.8')
+      .attr('width', '4')
+      .attr('height', '1.05');
     this.svg.append('rect')
-    .attr('class', 'uiClick')
-    .attr('id', 'noughtClickComputer')
-    .attr('x', '2.5')
-    .attr('y', '7.85')
-    .attr('width', '4')
-    .attr('height', '1.05');
+      .attr('class', 'uiClick')
+      .attr('id', 'noughtClickComputer')
+      .attr('x', '2.5')
+      .attr('y', '7.85')
+      .attr('width', '4')
+      .attr('height', '1.05');
 
     let uiElements = d3.selectAll('.uiClick')
-    .attr('stroke', 'transparent')
-    .attr('stroke-width', 0.01)
-    .attr('fill', 'transparent')
-    .on('click', () => {
-      this._clickHandler(d3.event);
-    });
+      .attr('stroke', 'transparent')
+      .attr('stroke-width', 0.01)
+      .attr('fill', 'transparent')
+      .on('click', () => {
+        this._clickHandler(d3.event);
+      });
 
   }
 
