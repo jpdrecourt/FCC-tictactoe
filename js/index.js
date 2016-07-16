@@ -877,7 +877,6 @@ class TicTacToeInterface {
   }
 
   _displayInterface() {
-    debugger;
     // Cross symbol
     this.cross.symbol = new ImperfectCrossPath(-1.3, 7.8, 1);
     this.cross.symbol.addPathToSvg(this.svg)
@@ -1150,7 +1149,6 @@ class TicTacToeInterface {
   }
 
   _launchPlay() {
-    debugger;
     // Create the game
     let game = new TicTacToeGame();
     // Define players
