@@ -753,6 +753,7 @@ class slider {
     this._isMouseDown = false;
     this._xStart = x - width / 2;
     let sliderGroup = this._svg.append('g');
+    // Main line
     let line = new ImperfectLinePath(this._xStart, y, this._xStart + width, y, 0);
     line.addPathToSvg(sliderGroup);
     line.draw(0);
@@ -765,19 +766,21 @@ class slider {
       notch.addPathToSvg(sliderGroup);
       notch.draw(0);
     }
+
     // Cursor
     this._cursorGroup = sliderGroup.append("g");
     let cursor = new ImperfectCirclePath(this._xStart, y, 1.5 * height, 1);
     cursor.addPathToSvg(this._cursorGroup);
     cursor.draw(0);
 
+    // Styling
     sliderGroup
       .attr('stroke', 'white')
       .attr('fill', 'none')
       .attr('stroke-width', 0.1)
       .attr('filter', 'url(#chalkTexture)');
-    // UI stuff
-    this.clickable = this._svg.append('rect')
+    // UI
+    this.clickable = sliderGroup.append('rect')
       .attr('class', 'uiClick')
       .attr('id', uiID)
       .attr('x', this._xStart - 0.4 * this._space)
@@ -787,20 +790,23 @@ class slider {
       .attr('stroke', 'transparent')
       .attr('fill', 'transparent')
       // .on('click', () => {console.log(this._snapCursor(this);})
-      .on('mouseup', () => {console.log('Mouse up');
+      .on('mouseup.slider', () => {
+        this._snapCursor(this);
         this._isMouseDown = false;
       })
-      .on('mousedown', () => {console.log('Mouse down');
+      .on('mousedown.slider', () => {
         this._isMouseDown = true;
       })
-      .on('mousemove', () => {this._mouseMove(this);});
+      .on('mousemove.slider', () => {
+        this._mouseMove(this);
+      });
 
       // Slider value
       this._xTrans = 0;
       this._value = 0;
   }
 
-  get value() {return (this._xTrans - this._xStart) / this._space;}
+  get value() {return this._xTrans / this._space;}
 
   _mouseMove(self) {
     if (self._isMouseDown) {
@@ -818,83 +824,97 @@ class slider {
 class TicTacToeInterface {
   constructor() {
     this.svg = d3.select('#ui');
+    this.nought ={};
+    this.cross = {};
+    this.nought.slider = undefined;
+    this.cross.slider = undefined;
+    // Player levels - Undefined -> human, 0-3 -> AI
+    this.cross.player = undefined;
+    this.nought.player = undefined;
+    this._levels = ['Wise cookie', 'Geeky monkey', 'Sober human', 'Spaced AI'];
     this._drawGrid(this.svg); // DEBUG
     this._displayInterface();
     this._createUI();
-    this.noughtSlider = undefined;
-    this.crossSlider = undefined;
   }
 
   _displayInterface() {
-    this.cross = new ImperfectCrossPath(-1.3, 7.8, 1);
-    this.cross.addPathToSvg(this.svg)
+    // Cross symbol
+    let crossSymbol = new ImperfectCrossPath(-1.3, 7.8, 1);
+    crossSymbol.addPathToSvg(this.svg)
       .attr('stroke', 'white')
       .attr('fill', 'none')
       .attr('stroke-width', 0.1)
       .attr('filter', 'url(#chalkTexture)');
-    this.cross.draw(0);
+    crossSymbol.draw(0);
     // Cross Human
     this.svg.append('text')
-      .attr('text-anchor', 'middle')
-      .attr('font-family', 'Permanent Marker')
+      .attr('class', 'uiText')
       .text('Human')
       .attr('x', '-4.5')
-      .attr('y', '7.4')
-      .attr('font-size', '0.7')
-      .attr('fill', 'white')
-      .attr('filter', 'url(#chalkTexture)');
+      .attr('y', '7.4');
     // Cross computer
     this.svg.append('text')
-      .attr('text-anchor', 'middle')
-      .attr('font-family', 'Permanent Marker')
+      .attr('class', 'uiText')
       .text('Computer')
-      .attr('x', '4.5')
-      .attr('y', '8.5')
-      .attr('font-size', '0.7')
-      .attr('fill', 'white')
-      .attr('filter', 'url(#chalkTexture)');
+      .attr('x', '-4.5')
+      .attr('y', '8.5');
     // Slider cross
-    this.crossSlider = new slider(this.svg, -4.5, 9.5, 3.5, 'sliderClickCross');
+    this.cross.levelDisplay = this.svg.append('text')
+      .attr('class', 'uiText')
+      .attr('x', '-4.5')
+      .attr('y', '10.5');
+    this.cross.slider = new slider(this.svg, -4.5, 9.5, 3.5, 'sliderClickCross');
+    this._updateAILevel(this.cross);
+    this.cross.slider.clickable
+      .on('click.level', () => {this._updateAILevel(this.cross);})
+      .on('mousemove.level', () => {this._updateAILevel(this.cross);});
 
-    this.nought = new ImperfectCirclePath(1.3, 7.8, 0.5);
-    this.nought.addPathToSvg(this.svg)
+    // Nought symbol
+    let noughtSymbol = new ImperfectCirclePath(1.3, 7.8, 0.5);
+    noughtSymbol.addPathToSvg(this.svg)
       .attr('stroke', 'white')
       .attr('fill', 'none')
       .attr('stroke-width', 0.1)
       .attr('filter', 'url(#chalkTexture)');
-    this.nought.draw(0);
+    noughtSymbol.draw(0);
     // Nought human
     this.svg.append('text')
-      .attr('text-anchor', 'middle')
-      .attr('font-family', 'Permanent Marker')
+      .attr('class', 'uiText')
       .text('Human')
       .attr('x', '4.5')
-      .attr('y', '7.4')
-      .attr('font-size', '0.7')
-      .attr('fill', 'white')
-      .attr('filter', 'url(#chalkTexture)');
+      .attr('y', '7.4');
     // Nought computer
     this.svg.append('text')
-      .attr('text-anchor', 'middle')
-      .attr('font-family', 'Permanent Marker')
+      .attr('class', 'uiText')
       .text('Computer')
-      .attr('x', '-4.5')
-      .attr('y', '8.5')
-      .attr('font-size', '0.7')
-      .attr('fill', 'white')
-      .attr('filter', 'url(#chalkTexture)');
+      .attr('x', '4.5')
+      .attr('y', '8.5');
+    // Nought slider
+    this.nought.levelDisplay = this.svg.append('text')
+      .attr('class', 'uiText')
+      .attr('x', '4.5')
+      .attr('y', '10.5');
+    this.nought.slider = new slider(this.svg, 4.5, 9.5, 3.5, 'sliderClickNought');
+    this._updateAILevel(this.nought);
+    this.nought.slider.clickable
+      .on('click.level', () => {this._updateAILevel(this.nought);})
+      .on('mousemove.level', () => {this._updateAILevel(this.nought);});
+
     // Message
     this.svg.append('text')
-      .attr('id', 'message')
-      .attr('text-anchor', 'middle')
-      .attr('font-family', 'Permanent Marker')
-      .text('Select players')
-      .attr('x', '0')
-      .attr('y', '6')
-      .attr('font-size', '0.7')
-      .attr('fill', 'white')
-      .attr('filter', 'url(#chalkTexture)');
-    this.noughtSlider = new slider(this.svg, 4.5, 9.5, 3.5, 'sliderClickNought');
+    .attr('class', 'uiText')
+    .attr('id', 'message')
+    .text('Select players')
+    .attr('x', '0')
+    .attr('y', '6');
+
+    // Styling
+    this.svg.selectAll('.uiText')
+    .attr('text-anchor', 'middle')
+    .attr('font-family', 'Permanent Marker')
+    .attr('font-size', '0.7')
+    .attr('fill', 'white')
+    .attr('filter', 'url(#chalkTexture)');
   }
 
   _createUI() {
@@ -953,6 +973,12 @@ class TicTacToeInterface {
 
   _clickHandler(event) {
     this._msg(event.toElement.id);
+  }
+
+  _updateAILevel(symbol) {
+    symbol.levelDisplay.html(this._levels[symbol.slider.value]);
+    // If we're here, it's because we're playing with an AI.
+    symbol.player = symbol.slider.value;
   }
 
   // DEBUG
