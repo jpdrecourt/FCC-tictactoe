@@ -752,10 +752,10 @@ class slider {
     this._svg = svg;
     this._isMouseDown = false;
     this._xStart = x - width / 2;
-    let sliderGroup = this._svg.append('g');
+    this.sliderGroup = this._svg.append('g');
     // Main line
     let line = new ImperfectLinePath(this._xStart, y, this._xStart + width, y, 0);
-    line.addPathToSvg(sliderGroup);
+    line.addPathToSvg(this.sliderGroup);
     line.draw(0);
     // Notches
     this._space = width / (nSteps - 1);
@@ -763,24 +763,24 @@ class slider {
     let notch;
     for (let i = 0; i < nSteps; i++) {
       notch = new ImperfectLinePath(this._xStart + i * this._space, y - height, this._xStart + i * this._space, y + height, 0);
-      notch.addPathToSvg(sliderGroup);
+      notch.addPathToSvg(this.sliderGroup);
       notch.draw(0);
     }
 
     // Cursor
-    this._cursorGroup = sliderGroup.append("g");
+    this._cursorGroup = this.sliderGroup.append("g");
     let cursor = new ImperfectCirclePath(this._xStart, y, 1.5 * height, 1);
     cursor.addPathToSvg(this._cursorGroup);
     cursor.draw(0);
 
     // Styling
-    sliderGroup
+    this.sliderGroup
       .attr('stroke', 'white')
       .attr('fill', 'none')
       .attr('stroke-width', 0.1)
       .attr('filter', 'url(#chalkTexture)');
     // UI
-    this.clickable = sliderGroup.append('rect')
+    this.clickable = this.sliderGroup.append('rect')
       .attr('class', 'uiClick')
       .attr('id', uiID)
       .attr('x', this._xStart - 0.4 * this._space)
@@ -801,12 +801,14 @@ class slider {
         this._mouseMove(this);
       });
 
-      // Slider value
-      this._xTrans = 0;
-      this._value = 0;
+    // Slider value
+    this._xTrans = 0;
+    this._value = 0;
   }
 
-  get value() {return this._xTrans / this._space;}
+  get value() {
+    return this._xTrans / this._space;
+  }
 
   _mouseMove(self) {
     if (self._isMouseDown) {
@@ -824,28 +826,28 @@ class slider {
 class TicTacToeInterface {
   constructor() {
     this.svg = d3.select('#ui');
-    this.nought ={};
+    this.nought = {};
     this.cross = {};
     this.nought.slider = undefined;
     this.cross.slider = undefined;
     // Player levels - Undefined -> human, 0-3 -> AI
     this.cross.player = undefined;
-    this.nought.player = undefined;
+    this.nought.player = 0;
     this._levels = ['Wise cookie', 'Geeky monkey', 'Sober human', 'Spaced AI'];
-    this._drawGrid(this.svg); // DEBUG
+    // this._drawGrid(this.svg); // DEBUG
     this._displayInterface();
     this._createUI();
   }
 
   _displayInterface() {
     // Cross symbol
-    let crossSymbol = new ImperfectCrossPath(-1.3, 7.8, 1);
-    crossSymbol.addPathToSvg(this.svg)
+    this.cross.symbol = new ImperfectCrossPath(-1.3, 7.8, 1);
+    this.cross.symbol.addPathToSvg(this.svg)
       .attr('stroke', 'white')
       .attr('fill', 'none')
       .attr('stroke-width', 0.1)
       .attr('filter', 'url(#chalkTexture)');
-    crossSymbol.draw(0);
+    this.cross.symbol.draw(0);
     // Cross Human
     this.svg.append('text')
       .attr('class', 'uiText')
@@ -866,17 +868,23 @@ class TicTacToeInterface {
     this.cross.slider = new slider(this.svg, -4.5, 9.5, 3.5, 'sliderClickCross');
     this._updateAILevel(this.cross);
     this.cross.slider.clickable
-      .on('click.level', () => {this._updateAILevel(this.cross);})
-      .on('mousemove.level', () => {this._updateAILevel(this.cross);});
+      .on('click.level', () => {
+        this._updateAILevel(this.cross);
+      })
+      .on('mousemove.level', () => {
+        this._updateAILevel(this.cross);
+      });
+    // Cross is human at first
+    this._hideSlider(this.cross);
 
     // Nought symbol
-    let noughtSymbol = new ImperfectCirclePath(1.3, 7.8, 0.5);
-    noughtSymbol.addPathToSvg(this.svg)
+    this.nought.symbol = new ImperfectCirclePath(1.3, 7.8, 0.5);
+    this.nought.symbol.addPathToSvg(this.svg)
       .attr('stroke', 'white')
       .attr('fill', 'none')
       .attr('stroke-width', 0.1)
       .attr('filter', 'url(#chalkTexture)');
-    noughtSymbol.draw(0);
+    this.nought.symbol.draw(0);
     // Nought human
     this.svg.append('text')
       .attr('class', 'uiText')
@@ -897,24 +905,89 @@ class TicTacToeInterface {
     this.nought.slider = new slider(this.svg, 4.5, 9.5, 3.5, 'sliderClickNought');
     this._updateAILevel(this.nought);
     this.nought.slider.clickable
-      .on('click.level', () => {this._updateAILevel(this.nought);})
-      .on('mousemove.level', () => {this._updateAILevel(this.nought);});
+      .on('click.level', () => {
+        this._updateAILevel(this.nought);
+      })
+      .on('mousemove.level', () => {
+        this._updateAILevel(this.nought);
+      });
+
+    // Selection rectangles
+    // Cross human
+    this.svg.append('rect')
+      .attr('visibility', 'visible')
+      .attr('class', 'uiText')
+      .attr('id', 'crossSelectHuman')
+      .attr('x', '-6')
+      .attr('y', '6.8')
+      .attr('width', '3.2')
+      .attr('height', '1')
+      .attr('fill', 'none')
+      .attr('stroke', 'white')
+      .attr('stroke-width', '0.1');
+    // Cross computer
+    this.svg.append('rect')
+      .attr('visibility', 'hidden')
+      .attr('class', 'uiText')
+      .attr('id', 'crossSelectComputer')
+      .attr('x', '-6.3')
+      .attr('y', '7.8')
+      .attr('width', '3.6')
+      .attr('height', '1')
+      .attr('fill', 'none')
+      .attr('stroke', 'white')
+      .attr('stroke-width', '0.1');
+
+    // Nought human
+    this.svg.append('rect')
+      .attr('visibility', 'hidden')
+      .attr('class', 'uiText')
+      .attr('id', 'noughtSelectHuman')
+      .attr('x', '3')
+      .attr('y', '6.8')
+      .attr('width', '3.2')
+      .attr('height', '1')
+      .attr('fill', 'none')
+      .attr('stroke', 'white')
+      .attr('stroke-width', '0.1');
+    // Nought computer
+    this.svg.append('rect')
+      .attr('visibility', 'visible')
+      .attr('class', 'uiText')
+      .attr('id', 'noughtSelectComputer')
+      .attr('x', '2.7')
+      .attr('y', '7.8')
+      .attr('width', '3.6')
+      .attr('height', '1')
+      .attr('fill', 'none')
+      .attr('stroke', 'white')
+      .attr('stroke-width', '0.1');
+
 
     // Message
     this.svg.append('text')
-    .attr('class', 'uiText')
-    .attr('id', 'message')
-    .text('Select players')
-    .attr('x', '0')
-    .attr('y', '6');
+      .attr('class', 'uiText')
+      .attr('id', 'message')
+      .text('Play!')
+      .attr('x', '0')
+      .attr('y', '6');
+    this.svg.append('rect')
+      .attr('class', 'uiText')
+      .attr('id', 'playMessageRect')
+      .attr('x', '-2')
+      .attr('y', '5')
+      .attr('width', '4')
+      .attr('height', '1.5')
+      .attr('fill', 'none')
+      .attr('stroke', 'white')
+      .attr('stroke-width', '0.1');
 
     // Styling
     this.svg.selectAll('.uiText')
-    .attr('text-anchor', 'middle')
-    .attr('font-family', 'Permanent Marker')
-    .attr('font-size', '0.7')
-    .attr('fill', 'white')
-    .attr('filter', 'url(#chalkTexture)');
+      .attr('text-anchor', 'middle')
+      .attr('font-family', 'Permanent Marker')
+      .attr('font-size', '0.7')
+      .attr('filter', 'url(#chalkTexture)');
   }
 
   _createUI() {
@@ -960,25 +1033,87 @@ class TicTacToeInterface {
       .attr('y', '7.85')
       .attr('width', '4')
       .attr('height', '1.05');
+    this.svg.append('rect')
+      .attr('class', 'uiClick')
+      .attr('id', 'playMessage')
+      .attr('x', '-2')
+      .attr('y', '5')
+      .attr('width', '4')
+      .attr('height', '1.5')
+      .on('mousedown.visual', () => {
+        d3.select('#playMessageRect')
+          .attr('fill', 'white')
+          .attr('opacity', '0.5');
+      })
+      .on('mouseup.visual', () => {
+        d3.select('#playMessageRect')
+          .attr('fill', 'none')
+          .attr('opacity', '1');
+      });
 
-    let uiElements = d3.selectAll('.uiClick')
+    d3.selectAll('.uiClick')
       .attr('stroke', 'transparent')
       .attr('stroke-width', 0.01)
       .attr('fill', 'transparent')
       .on('mouseup', () => {
         this._clickHandler(d3.event);
       });
-
   }
 
   _clickHandler(event) {
     this._msg(event.toElement.id);
+    switch (event.toElement.id) {
+      case 'crossClickHuman':
+        d3.select('#crossSelectHuman').attr('visibility', 'visible');
+        d3.select('#crossSelectComputer').attr('visibility', 'hidden');
+        this.cross.player = undefined;
+        this._hideSlider(this.cross);
+        break;
+      case 'crossClickComputer':
+        d3.select('#crossSelectHuman').attr('visibility', 'hidden');
+        d3.select('#crossSelectComputer').attr('visibility', 'visible');
+        this.cross.player = this.cross.slider.value;
+        this._showSlider(this.cross);
+        break;
+      case 'noughtClickHuman':
+        d3.select('#noughtSelectHuman').attr('visibility', 'visible');
+        d3.select('#noughtSelectComputer').attr('visibility', 'hidden');
+        this.nought.player = undefined;
+        this._hideSlider(this.nought);
+        break;
+      case 'noughtClickComputer':
+        d3.select('#noughtSelectHuman').attr('visibility', 'hidden');
+        d3.select('#noughtSelectComputer').attr('visibility', 'visible');
+        this.nought.player = this.nought.slider.value;
+        this._showSlider(this.nought);
+        break;
+      case 'playMessage':
+        this._launchPlay();
+        break;
+      default:
+        console.log(event.toElement.id);
+    }
   }
+
+  _hideSlider(symbol) {
+    symbol.slider.sliderGroup.attr('visibility', 'hidden');
+    symbol.levelDisplay.attr('visibility', 'hidden');
+  }
+
+  _showSlider(symbol) {
+    symbol.slider.sliderGroup.attr('visibility', 'visible');
+    symbol.levelDisplay.attr('visibility', 'visible');
+  }
+
 
   _updateAILevel(symbol) {
     symbol.levelDisplay.html(this._levels[symbol.slider.value]);
     // If we're here, it's because we're playing with an AI.
     symbol.player = symbol.slider.value;
+  }
+
+  _launchPlay() {
+
   }
 
   // DEBUG
@@ -1020,4 +1155,3 @@ class TicTacToeInterface {
 }
 
 let app = new TicTacToeInterface();
-let game = new TicTacToeGame();
