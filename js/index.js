@@ -742,7 +742,11 @@ class TicTacToeGame {
   }
 }
 
-// Creates a slider given its location centre and a width
+/* Creates a slider given its location centre and a width
+Properties :
+  clickable: UI rectangle on top of the graphic
+  value: the value pointed by the cursor
+*/
 class slider {
   constructor(svg, x, y, width, uiID = '', nSteps = 4) {
     this._svg = svg;
@@ -773,34 +777,41 @@ class slider {
       .attr('stroke-width', 0.1)
       .attr('filter', 'url(#chalkTexture)');
     // UI stuff
-    let clickable = this._svg.append('rect')
-      .attr('id', 'uiClick')
+    this.clickable = this._svg.append('rect')
+      .attr('class', 'uiClick')
+      .attr('id', uiID)
       .attr('x', this._xStart - 0.4 * this._space)
       .attr('y', y - 3 * height)
       .attr('width', width + 0.8 * this._space)
       .attr('height', 6 * height)
       .attr('stroke', 'transparent')
       .attr('fill', 'transparent')
-      .on('click', () => {let self = this; this._snapCursor(self);})
-      .on('mousedown', () => {
-        this._isMouseDown = true;
-      })
-      .on('mouseup', () => {
+      // .on('click', () => {console.log(this._snapCursor(this);})
+      .on('mouseup', () => {console.log('Mouse up');
         this._isMouseDown = false;
       })
-      .on('mousemove', () => {let self = this; this._mouseMove(self);});
+      .on('mousedown', () => {console.log('Mouse down');
+        this._isMouseDown = true;
+      })
+      .on('mousemove', () => {this._mouseMove(this);});
+
+      // Slider value
+      this._xTrans = 0;
+      this._value = 0;
   }
 
+  get value() {return (this._xTrans - this._xStart) / this._space;}
+
   _mouseMove(self) {
-    if (this._isMouseDown) {
-      this._snapCursor(self);
+    if (self._isMouseDown) {
+      self._snapCursor(self);
     }
   }
 
   _snapCursor(self) {
     let mouseXY = d3.mouse(self._svg.node());
-    let xTrans = Math.round((mouseXY[0] - self._xStart) / self._space) * self._space;
-    self._cursorGroup.attr('transform', `translate (${xTrans} 0)`);
+    this._xTrans = Math.round((mouseXY[0] - self._xStart) / self._space) * self._space;
+    self._cursorGroup.attr('transform', `translate (${this._xTrans} 0)`);
   }
 }
 
@@ -934,14 +945,13 @@ class TicTacToeInterface {
       .attr('stroke', 'transparent')
       .attr('stroke-width', 0.01)
       .attr('fill', 'transparent')
-      .on('click', () => {
+      .on('mouseup', () => {
         this._clickHandler(d3.event);
       });
 
   }
 
   _clickHandler(event) {
-    console.log(event);
     this._msg(event.toElement.id);
   }
 
