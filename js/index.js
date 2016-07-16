@@ -239,7 +239,7 @@ class TicTacToeBoard {
   }
 
   _eraseBoard() {
-
+    this.svg.selectAll('path').remove();
   }
 
   _displayGrid(renderCallback) {
@@ -394,8 +394,10 @@ Inspired by http://http://neverstopbuilding.com/minimax
 The main difference is that the player doesn't affect the current game.
 It just uses the rules of the TicTacToeGame class */
 class MinimaxComputerPlayer extends Player {
-  constructor(game, id) {
+  constructor(game, id, level = 1) {
     super(game, id);
+    this._depth = undefined;
+    this._defineDepth(level);
   }
 
   get moveRC() {
@@ -408,16 +410,26 @@ class MinimaxComputerPlayer extends Player {
     this._simulateClick();
   }
 
+  _defineDepth(level) {
+    switch (level) {
+      case 1:
+        this._depth = 1;
+        break;
+      case 2:
+        this._depth = 2;
+        break;
+      case 3:
+        this._depth = Infinity;
+        break;
+    }
+  }
+
   _initPlay() {
     if (this._game.board.moves === 0) {
       this._moveRC = [1, 1];
     } else {
       this._minimax(this.id, []);
     }
-  }
-
-  _isFirstMove() {
-
   }
 
   // Minimax algorithm returning a score
@@ -429,7 +441,7 @@ class MinimaxComputerPlayer extends Player {
       scores = [],
       moves = [];
 
-    if (isGameOver) {
+    if (isGameOver || depth > this._depth) {
       return this._score(winner, depth);
     }
     // Explore all the next moves
@@ -542,13 +554,27 @@ class RandomComputerPlayer extends Player {
 class TicTacToeGame {
   constructor() {
     this._player = [];
-    this._player[0] = new HumanPlayer(this, 1);
-    this._player[1] = new HumanPlayer(this, -1);
     this._currentPlayer = 0; // Value 0 or 1
-    // Start first turn
-    this.board = new TicTacToeBoard(() => {
-      this._turn();
-    });
+  }
+
+  get crossPlayer() {return this._player[0];}
+  set crossPlayer(player) {
+    this._player[0] = player;
+  }
+
+  get noughtPlayer() {return this._player[1];}
+  set noughtPlayer(player) {
+    this._player[1] = player;
+  }
+
+  play() {
+    if (this._player.length == 2) {
+      this.board = new TicTacToeBoard(() => {
+        this._turn();
+      });
+    } else {
+      throw ('Error: players not defined.');
+    }
   }
 
   // Run a turn of the game
@@ -830,8 +856,8 @@ class TicTacToeInterface {
     this.cross = {};
     this.nought.slider = undefined;
     this.cross.slider = undefined;
-    // Player levels - Undefined -> human, 0-3 -> AI
-    this.cross.player = undefined;
+    // Player levels : -1 -> human, 0-3 -> AI
+    this.cross.player = -1;
     this.nought.player = 0;
     this._levels = ['Wise cookie', 'Geeky monkey', 'Sober human', 'Spaced AI'];
     // this._drawGrid(this.svg); // DEBUG
@@ -840,6 +866,7 @@ class TicTacToeInterface {
   }
 
   _displayInterface() {
+    debugger;
     // Cross symbol
     this.cross.symbol = new ImperfectCrossPath(-1.3, 7.8, 1);
     this.cross.symbol.addPathToSvg(this.svg)
@@ -864,9 +891,9 @@ class TicTacToeInterface {
     this.cross.levelDisplay = this.svg.append('text')
       .attr('class', 'uiText')
       .attr('x', '-4.5')
-      .attr('y', '10.5');
+      .attr('y', '10.5')
+      .html(this._levels[0]);
     this.cross.slider = new slider(this.svg, -4.5, 9.5, 3.5, 'sliderClickCross');
-    this._updateAILevel(this.cross);
     this.cross.slider.clickable
       .on('click.level', () => {
         this._updateAILevel(this.cross);
@@ -901,9 +928,9 @@ class TicTacToeInterface {
     this.nought.levelDisplay = this.svg.append('text')
       .attr('class', 'uiText')
       .attr('x', '4.5')
-      .attr('y', '10.5');
+      .attr('y', '10.5')
+      .html(this._levels[0]);
     this.nought.slider = new slider(this.svg, 4.5, 9.5, 3.5, 'sliderClickNought');
-    this._updateAILevel(this.nought);
     this.nought.slider.clickable
       .on('click.level', () => {
         this._updateAILevel(this.nought);
@@ -1061,12 +1088,11 @@ class TicTacToeInterface {
   }
 
   _clickHandler(event) {
-    this._msg(event.toElement.id);
     switch (event.toElement.id) {
       case 'crossClickHuman':
         d3.select('#crossSelectHuman').attr('visibility', 'visible');
         d3.select('#crossSelectComputer').attr('visibility', 'hidden');
-        this.cross.player = undefined;
+        this.cross.player = -1;
         this._hideSlider(this.cross);
         break;
       case 'crossClickComputer':
@@ -1078,7 +1104,7 @@ class TicTacToeInterface {
       case 'noughtClickHuman':
         d3.select('#noughtSelectHuman').attr('visibility', 'visible');
         d3.select('#noughtSelectComputer').attr('visibility', 'hidden');
-        this.nought.player = undefined;
+        this.nought.player = -1;
         this._hideSlider(this.nought);
         break;
       case 'noughtClickComputer':
@@ -1113,7 +1139,32 @@ class TicTacToeInterface {
   }
 
   _launchPlay() {
+    debugger;
+    // Create the game
+    let game = new TicTacToeGame();
+    // Define players
+    game.crossPlayer = this._definePlayer(this.cross.player, game, 1);
+    game.noughtPlayer = this._definePlayer(this.nought.player, game, -1);
+    game.play();
+  }
 
+  // return a player depending on the playerValue (the level), the game and the sign (1 -> cross, -1 -> nought)
+  _definePlayer(playerValue, game, sign){
+    let thePlayer;
+    switch (playerValue) {
+      case -1:
+        thePlayer = new HumanPlayer(game, sign);
+        break;
+      case 0:
+        thePlayer = new RandomComputerPlayer(game, sign);
+        break;
+      case 1:
+      case 2:
+      case 3:
+        thePlayer = new MinimaxComputerPlayer(game, sign, playerValue);
+        break;
+    }
+    return thePlayer;
   }
 
   // DEBUG
