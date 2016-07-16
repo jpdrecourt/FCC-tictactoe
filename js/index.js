@@ -455,12 +455,23 @@ class MinimaxComputerPlayer extends Player {
       let maxScore = Math.max(...scores);
       if (depth === 0) {
         // We've found the best move
-        this._moveRC = moves[scores.indexOf(maxScore)];
+        let indexes = getAllIndexes(scores, maxScore);
+        this._moveRC = moves[indexes[Math.floor(Math.random() * indexes.length)]];
       }
       return maxScore;
     } else {
       // Return the min score
       return Math.min(...scores);
+    }
+
+    function getAllIndexes(arr, val) {
+      let indexes = [], i;
+      for(i = 0; i < arr.length; i++) {
+        if (arr[i] === val) {
+          indexes.push(i);
+        }
+      }
+      return indexes;
     }
   }
 
