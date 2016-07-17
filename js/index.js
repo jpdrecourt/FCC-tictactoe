@@ -562,10 +562,21 @@ class RandomComputerPlayer extends Player {
   }
 }
 
+/* To initialise a new game:
+game = new TicTacToeGame(endCallback); // Creates an instance with the callback to use when the game is over. The endCallback function takes the winner as argument: 1: x, 0: draw, -1 o
+// Defines the player
+game.crossPlayer = new Player(game, 1);
+game.noughtPlayer = new Player(game, -1);
+// Starts the first round
+game.play()
+*/
 class TicTacToeGame {
-  constructor() {
+  constructor(endCallback=() => {return;}) {
     this._player = [];
     this._currentPlayer = 0; // Value 0 or 1
+    this._endCallback = endCallback;
+    this._newTurnCallback = undefined;
+    this.board = undefined;
   }
 
   get crossPlayer() {return this._player[0];}
@@ -578,35 +589,39 @@ class TicTacToeGame {
     this._player[1] = player;
   }
 
-  play() {
+  play(newTurnCallback = () => {return;}) {
+    this._newTurnCallback = newTurnCallback;
     if (this._player.length == 2) {
       this.board = new TicTacToeBoard(() => {
-        this._turn();
+        this.board.svg.on("click", () => {
+          this._evalMove();
+        });
+        this._turn(true);
       });
     } else {
       throw ('Error: players not defined.');
     }
   }
 
-  // Run a turn of the game
-  _turn() {
-    this.board.svg.on("click", () => {
-      this._evalMove();
-    });
+  // Run a turn of the game - Calls the turn callback if it's a proper turn, not just waiting for a legal move - Calls the newTurnCallback with the player 1: x, -1: o
+  _turn(isNewTurn) {
+    if (isNewTurn) {
+      console.log(this._currentPlayer);
+      this._newTurnCallback(this._currentPlayer ? -1 : 1);
+    }
     this._player[this._currentPlayer].play();
   }
 
   // Evaluates whether the move is legal and processes it
   _evalMove() {
-    document.getElementById('gameMsg').innerHTML = '';
     let moveRC = this._player[this._currentPlayer].moveRC;
     if (this._isLegal(moveRC)) {
       this.board.play(moveRC, () => {
         this._checkWin(moveRC);
       });
     } else {
-      document.getElementById('gameMsg').innerHTML = 'Illegal move, try again';
-      this._turn();
+      // Just wait until a valid input comes
+      this._turn(false);
     }
   }
 
@@ -621,7 +636,7 @@ class TicTacToeGame {
         this._drawSequence();
       } else {
         this._currentPlayer = !this._currentPlayer + 0;
-        this._turn();
+        this._turn(true);
       }
     } else {
       this._winSequence(moveRC, won);
@@ -744,13 +759,12 @@ class TicTacToeGame {
 
   _drawSequence() {
     this.board.draw();
-    document.getElementById('gameMsg').innerHTML = "It's a draw! " + TicTacToeGame.winner(this.board.played);
-
+    this._endCallback(0);
   }
 
   _winSequence(moveRC, won) {
     this.board.won(...this._wonRC(moveRC, won));
-    document.getElementById('gameMsg').innerHTML = 'You won! ' + TicTacToeGame.winner(this.board.played);
+    this._endCallback(TicTacToeGame.winner(this.board.played));
   }
 
   // Returns an array of startRC and stopRC giving the start and end square of the winning pattern
@@ -871,18 +885,18 @@ class TicTacToeInterface {
     this.cross.player = -1;
     this.nought.player = 0;
     this._levels = ['Wise cookie', 'Geeky monkey', 'Sober human', 'Spaced AI'];
-    // this._drawGrid(this.svg); // DEBUG
+    this._drawGrid(this.svg); // DEBUG
     this._displayInterface();
     this._createUI();
   }
 
   _displayInterface() {
     // Cross symbol
-    this.cross.symbol = new ImperfectCrossPath(-1.3, 7.8, 1);
+    this.cross.symbol = new ImperfectCrossPath(-4.5, 5.8, 1);
     this.cross.symbol.addPathToSvg(this.svg)
       .attr('stroke', 'white')
       .attr('fill', 'none')
-      .attr('stroke-width', 0.1)
+      .attr('stroke-width', 0.15)
       .attr('filter', 'url(#chalkTexture)');
     this.cross.symbol.draw(0);
     // Cross Human
@@ -915,7 +929,7 @@ class TicTacToeInterface {
     this._hideSlider(this.cross);
 
     // Nought symbol
-    this.nought.symbol = new ImperfectCirclePath(1.3, 7.8, 0.5);
+    this.nought.symbol = new ImperfectCirclePath(4.5, 5.8, 0.5);
     this.nought.symbol.addPathToSvg(this.svg)
       .attr('stroke', 'white')
       .attr('fill', 'none')
@@ -1030,13 +1044,6 @@ class TicTacToeInterface {
   _createUI() {
     this.svg.append('rect')
       .attr('class', 'uiClick')
-      .attr('id', 'crossClick')
-      .attr('x', '-2.1')
-      .attr('y', '7')
-      .attr('width', '1.6')
-      .attr('height', '1.6');
-    this.svg.append('rect')
-      .attr('class', 'uiClick')
       .attr('id', 'crossClickHuman')
       .attr('x', '-6.5')
       .attr('y', '6.8')
@@ -1049,13 +1056,6 @@ class TicTacToeInterface {
       .attr('y', '7.85')
       .attr('width', '4')
       .attr('height', '1.05');
-    this.svg.append('rect')
-      .attr('class', 'uiClick')
-      .attr('id', 'noughtClick')
-      .attr('x', '0.5')
-      .attr('y', '7')
-      .attr('width', '1.6')
-      .attr('height', '1.6');
     this.svg.append('rect')
       .attr('class', 'uiClick')
       .attr('id', 'noughtClickHuman')
@@ -1150,11 +1150,11 @@ class TicTacToeInterface {
 
   _launchPlay() {
     // Create the game
-    let game = new TicTacToeGame();
+    let game = new TicTacToeGame((w) => {this._endGame(w);});
     // Define players
     game.crossPlayer = this._definePlayer(this.cross.player, game, 1);
     game.noughtPlayer = this._definePlayer(this.nought.player, game, -1);
-    game.play();
+    game.play((p) => {this._newTurn(p);});
   }
 
   // return a player depending on the playerValue (the level), the game and the sign (1 -> cross, -1 -> nought)
@@ -1174,6 +1174,29 @@ class TicTacToeInterface {
         break;
     }
     return thePlayer;
+  }
+
+  // End game behaviour - winner is 1 for X, 0 for draw and -1 for o
+  _endGame(winner) {
+    if (winner === 0) {
+      // Draw
+      this._msg("It's a draw");
+    } else {
+      // Winner!
+      if (winner == 1) {
+        this._msg('Cross wins');
+      } else {
+        this._msg('Nought wins');
+      }
+    }
+  }
+
+  _newTurn(player) {
+    if (player == 1) {
+      this._msg('Cross playing');
+    } else {
+      this._msg('Noughts playing');
+    }
   }
 
   // DEBUG
