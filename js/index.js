@@ -234,11 +234,11 @@ class TicTacToeBoard {
 
   _initBoard(renderCallback) {
     this._disableClick();
-    this._eraseBoard();
+    this.eraseBoard();
     this._displayGrid(renderCallback);
   }
 
-  _eraseBoard() {
+  eraseBoard() {
     this.svg.selectAll('path').remove();
   }
 
@@ -425,6 +425,7 @@ class MinimaxComputerPlayer extends Player {
   }
 
   _initPlay() {
+    console.log(`${this.id} : ${this._depth}`);
     if (this._game.board.moves === 0) {
       this._moveRC = [1, 1];
     } else {
@@ -612,7 +613,6 @@ class TicTacToeGame {
   _turn(isNewTurn) {
     if (this._isRunning) {
       if (isNewTurn) {
-        console.log(this._currentPlayer);
         this._newTurnCallback(this._currentPlayer ? -1 : 1);
       }
       this._player[this._currentPlayer].play();
@@ -894,8 +894,19 @@ class slider {
       .attr('width', width + 0.8 * this._space)
       .attr('height', 6 * height)
       .attr('stroke', 'transparent')
-      .attr('fill', 'transparent')
-      // .on('click', () => {console.log(this._snapCursor(this);})
+      .attr('fill', 'transparent');
+    this.enable();
+    // Slider value
+    this._xTrans = 0;
+    this._value = 0;
+  }
+
+  get value() {
+    return this._xTrans / this._space;
+  }
+
+  enable() {
+    this.clickable
       .on('mouseup.slider', () => {
         this._snapCursor(this);
         this._isMouseDown = false;
@@ -906,14 +917,15 @@ class slider {
       .on('mousemove.slider', () => {
         this._mouseMove(this);
       });
-
-    // Slider value
-    this._xTrans = 0;
-    this._value = 0;
+    this.sliderGroup.attr('opacity', 1);
   }
 
-  get value() {
-    return this._xTrans / this._space;
+  disable() {
+    this.clickable
+      .on('mouseup.slider', () => {return;})
+      .on('mousedown.slider', () => {return;})
+      .on('mousemove.slider', () => {return;});
+    this.sliderGroup.attr('opacity', 0.6);
   }
 
   _mouseMove(self) {
@@ -936,7 +948,7 @@ class TicTacToeInterface {
     this.cross = {};
     this.nought.slider = undefined;
     this.cross.slider = undefined;
-    this.isPlaying = false;
+    this._isPlaying = false;
     // Player levels : -1 -> human, 0-3 -> AI
     this.cross.player = -1;
     this.nought.player = 0;
@@ -1186,15 +1198,18 @@ class TicTacToeInterface {
   }
 
   _clickHandler(event) {
-    this.cross.crown.hide();
-    this.nought.crown.hide();
-    if (this.isPlaying) {
+    if (this._isPlaying) {
       if (event.toElement.id == 'playMessage') {
         this._stopPlay();
         d3.select('#noughtArrow').attr('visibility', 'hidden');
         d3.select('#crossArrow').attr('visibility', 'hidden');
       }
     } else {
+      this.cross.crown.hide();
+      this.nought.crown.hide();
+      if (this._game !== undefined){
+        this._game.board.eraseBoard();
+      }
       switch (event.toElement.id) {
         case 'crossClickHuman':
           d3.select('#crossSelectHuman').attr('visibility', 'visible');
@@ -1247,6 +1262,18 @@ class TicTacToeInterface {
     symbol.levelDisplay.attr('visibility', 'visible');
   }
 
+  _startPlaying() {
+    this.cross.slider.disable();
+    this.nought.slider.disable();
+    this._isPlaying = true;
+
+  }
+  _stopPlaying() {
+    this.cross.slider.enable();
+    this.nought.slider.enable();
+    this._isPlaying = false;
+  }
+
 
   _updateAILevel(symbol) {
     symbol.levelDisplay.html(this._levels[symbol.slider.value]);
@@ -1255,7 +1282,7 @@ class TicTacToeInterface {
   }
 
   _launchPlay() {
-    this.isPlaying = true;
+    this._startPlaying();
     d3.select('#message').html('Stop!');
     // Create the game
     this._game = new TicTacToeGame((w) => {this._endGame(w);});
@@ -1266,7 +1293,7 @@ class TicTacToeInterface {
   }
 
   _stopPlay() {
-    this.isPlaying = false;
+    this._stopPlaying();
     d3.select('#message').html('Play!');
     this._game.stop();
   }
@@ -1292,6 +1319,8 @@ class TicTacToeInterface {
 
   // End game behaviour - winner is 1 for X, 0 for draw and -1 for o
   _endGame(winner) {
+    this._stopPlaying();
+    d3.select('#message').html('Play!');
     d3.select('#noughtArrow').attr('visibility', 'hidden');
     d3.select('#crossArrow').attr('visibility', 'hidden');
     if (winner === 0) {
