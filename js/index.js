@@ -793,6 +793,54 @@ class TicTacToeGame {
   }
 }
 
+/* Create and animate a crown over the winning sign x and y are the center of the crown. */
+class Crown {
+  constructor(svg, x, y, width, uiID = '') {
+    this.group = svg.append('g')
+      .attr('id', uiID);
+    let path = `M${x - width/2},${y} l${-width / 7},${-width / 7}`;
+    this.group.append('path')
+      .attr('d', path)
+      .attr('id', 'crown0');
+    path = `M${x - width/4},${y - width / 7} l${-width/10},${-width/4}`;
+    this.group.append('path')
+      .attr('d', path)
+      .attr('id', 'crown1');
+    path = `M${x},${y - width /6} l0, ${-width/3}`;
+    this.group.append('path')
+      .attr('d', path)
+      .attr('id', 'crown2');
+    path = `M${x + width/4},${y - width / 7} l${width/10},${-width/4}`;
+    this.group.append('path')
+      .attr('d', path)
+      .attr('id', 'crown3');
+    path = `M${x + width/2},${y} l${width / 7},${-width / 7}`;
+    this.group.append('path')
+      .attr('d', path)
+      .attr('id', 'crown4');
+    this.group.attr('stroke-linecap', 'round')
+    .selectAll('path').attr('visibility', 'hidden');
+  }
+
+  animate() {
+    this.group.selectAll('path')
+      .transition()
+      .attr('visibility', 'visible')
+      .delay((d, i) => {return i / 5 * 800;})
+      .transition()
+      .attr('visibility', 'hidden')
+      .delay((d, i) => {return 400 + i / 5 * 500;})
+      .transition()
+      .attr('visibility', 'visible')
+      .delay((d, i) => {return 800 + (5 - i) /5 * 500;});
+  }
+
+  hide() {
+    this.group.selectAll('path').attr('visibility', 'hidden');
+  }
+
+}
+
 /* Creates a slider given its location centre and a width
 Properties :
   clickable: UI rectangle on top of the graphic
@@ -885,7 +933,7 @@ class TicTacToeInterface {
     this.cross.player = -1;
     this.nought.player = 0;
     this._levels = ['Wise cookie', 'Geeky monkey', 'Sober human', 'Spaced AI'];
-    this._drawGrid(this.svg); // DEBUG
+    // this._drawGrid(this.svg); // DEBUG
     this._displayInterface();
     this._createUI();
   }
@@ -899,6 +947,10 @@ class TicTacToeInterface {
       .attr('stroke-width', 0.15)
       .attr('filter', 'url(#chalkTexture)');
     this.cross.symbol.draw(0);
+    this.cross.crown = new Crown(this.svg, -4.5, 5.2, 1.5, 'crossCrown');
+    this.cross.crown.group.attr('class', 'uiText')
+      .attr('stroke', 'white')
+      .attr('stroke-width', 0.1);
     // Cross Human
     this.svg.append('text')
       .attr('class', 'uiText')
@@ -936,6 +988,10 @@ class TicTacToeInterface {
       .attr('stroke-width', 0.1)
       .attr('filter', 'url(#chalkTexture)');
     this.nought.symbol.draw(0);
+    this.nought.crown = new Crown(this.svg, 4.5, 5.2, 1.5, 'noughtCrown');
+    this.nought.crown.group.attr('class', 'uiText')
+      .attr('stroke', 'white')
+      .attr('stroke-width', 0.1);
     // Nought human
     this.svg.append('text')
       .attr('class', 'uiText')
@@ -1122,6 +1178,8 @@ class TicTacToeInterface {
   }
 
   _clickHandler(event) {
+    this.cross.crown.hide();
+    this.nought.crown.hide();
     switch (event.toElement.id) {
       case 'crossClickHuman':
         d3.select('#crossSelectHuman').attr('visibility', 'visible');
@@ -1214,13 +1272,14 @@ class TicTacToeInterface {
     d3.select('#crossArrow').attr('visibility', 'hidden');
     if (winner === 0) {
       // Draw
-      this._msg("It's a draw");
+      this.cross.crown.animate();
+      this.nought.crown.animate();
     } else {
       // Winner!
       if (winner == 1) {
-        this._msg('Cross wins');
+        this.cross.crown.animate();
       } else {
-        this._msg('Nought wins');
+        this.nought.crown.animate();
       }
     }
   }
