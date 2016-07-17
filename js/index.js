@@ -344,7 +344,7 @@ class TicTacToeBoard {
     path.attr('filter', 'url(#chalkTexture)')
       .attr('fill', 'none')
       .attr('stroke', 'white')
-      .attr('stroke-width', '0.1');
+      .attr('stroke-width', '0.12');
     return path;
   }
 
@@ -425,9 +425,8 @@ class MinimaxComputerPlayer extends Player {
   }
 
   _initPlay() {
-    console.log(`${this.id} : ${this._depth}`);
     if (this._game.board.moves === 0) {
-      this._moveRC = [1, 1];
+      this._moveRC = [Math.floor(Math.random() * 3), Math.floor(Math.random() * 3)];
     } else {
       this._minimax(this.id, []);
     }
