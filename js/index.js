@@ -1014,6 +1014,21 @@ class TicTacToeInterface {
       .attr('stroke', 'white')
       .attr('stroke-width', '0.1');
 
+    // Arrows
+    this.svg.append('text')
+      .attr('visibility', 'hidden')
+      .attr('class', 'uiText')
+      .attr('id', 'crossArrow')
+      .text('<-')
+      .attr('x', '-3.1')
+      .attr('y', '5.9');
+    this.svg.append('text')
+      .attr('visibility', 'hidden')
+      .attr('class', 'uiText')
+      .attr('id', 'noughtArrow')
+      .text('->')
+      .attr('x', '3.0')
+      .attr('y', '5.9');
 
     // Message
     this.svg.append('text')
@@ -1178,6 +1193,8 @@ class TicTacToeInterface {
 
   // End game behaviour - winner is 1 for X, 0 for draw and -1 for o
   _endGame(winner) {
+    d3.select('#noughtArrow').attr('visibility', 'hidden');
+    d3.select('#crossArrow').attr('visibility', 'hidden');
     if (winner === 0) {
       // Draw
       this._msg("It's a draw");
@@ -1193,9 +1210,11 @@ class TicTacToeInterface {
 
   _newTurn(player) {
     if (player == 1) {
-      this._msg('Cross playing');
+      d3.select('#noughtArrow').attr('visibility', 'hidden');
+      d3.select('#crossArrow').attr('visibility', 'visible');
     } else {
-      this._msg('Noughts playing');
+      d3.select('#noughtArrow').attr('visibility', 'visible');
+      d3.select('#crossArrow').attr('visibility', 'hidden');
     }
   }
 
