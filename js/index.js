@@ -576,6 +576,7 @@ class TicTacToeGame {
     this._currentPlayer = 0; // Value 0 or 1
     this._endCallback = endCallback;
     this._newTurnCallback = undefined;
+    this._isRunning = true;
     this.board = undefined;
   }
 
@@ -603,13 +604,19 @@ class TicTacToeGame {
     }
   }
 
+  stop() {
+    this._isRunning = false;
+  }
+
   // Run a turn of the game - Calls the turn callback if it's a proper turn, not just waiting for a legal move - Calls the newTurnCallback with the player 1: x, -1: o
   _turn(isNewTurn) {
-    if (isNewTurn) {
-      console.log(this._currentPlayer);
-      this._newTurnCallback(this._currentPlayer ? -1 : 1);
+    if (this._isRunning) {
+      if (isNewTurn) {
+        console.log(this._currentPlayer);
+        this._newTurnCallback(this._currentPlayer ? -1 : 1);
+      }
+      this._player[this._currentPlayer].play();
     }
-    this._player[this._currentPlayer].play();
   }
 
   // Evaluates whether the move is legal and processes it
@@ -929,6 +936,7 @@ class TicTacToeInterface {
     this.cross = {};
     this.nought.slider = undefined;
     this.cross.slider = undefined;
+    this.isPlaying = false;
     // Player levels : -1 -> human, 0-3 -> AI
     this.cross.player = -1;
     this.nought.player = 0;
@@ -1180,44 +1188,52 @@ class TicTacToeInterface {
   _clickHandler(event) {
     this.cross.crown.hide();
     this.nought.crown.hide();
-    switch (event.toElement.id) {
-      case 'crossClickHuman':
-        d3.select('#crossSelectHuman').attr('visibility', 'visible');
-        d3.select('#crossSelectComputer').attr('visibility', 'hidden');
-        this.cross.player = -1;
-        this._hideSlider(this.cross);
-        if (this.nought.player < 0) {
-          d3.select('#AILevel').attr('visibility', 'hidden');
-        }
-        break;
-      case 'crossClickComputer':
-        d3.select('#crossSelectHuman').attr('visibility', 'hidden');
-        d3.select('#crossSelectComputer').attr('visibility', 'visible');
-        this.cross.player = this.cross.slider.value;
-        this._showSlider(this.cross);
-        d3.select('#AILevel').attr('visibility', 'visible');
-        break;
-      case 'noughtClickHuman':
-        d3.select('#noughtSelectHuman').attr('visibility', 'visible');
-        d3.select('#noughtSelectComputer').attr('visibility', 'hidden');
-        this.nought.player = -1;
-        this._hideSlider(this.nought);
-        if (this.cross.player < 0) {
-          d3.select('#AILevel').attr('visibility', 'hidden');
-        }
-        break;
-      case 'noughtClickComputer':
-        d3.select('#noughtSelectHuman').attr('visibility', 'hidden');
-        d3.select('#noughtSelectComputer').attr('visibility', 'visible');
-        this.nought.player = this.nought.slider.value;
-        this._showSlider(this.nought);
-        d3.select('#AILevel').attr('visibility', 'visible');
-        break;
-      case 'playMessage':
-        this._launchPlay();
-        break;
-      default:
-        console.log(event.toElement.id);
+    if (this.isPlaying) {
+      if (event.toElement.id == 'playMessage') {
+        this._stopPlay();
+        d3.select('#noughtArrow').attr('visibility', 'hidden');
+        d3.select('#crossArrow').attr('visibility', 'hidden');
+      }
+    } else {
+      switch (event.toElement.id) {
+        case 'crossClickHuman':
+          d3.select('#crossSelectHuman').attr('visibility', 'visible');
+          d3.select('#crossSelectComputer').attr('visibility', 'hidden');
+          this.cross.player = -1;
+          this._hideSlider(this.cross);
+          if (this.nought.player < 0) {
+            d3.select('#AILevel').attr('visibility', 'hidden');
+          }
+          break;
+        case 'crossClickComputer':
+          d3.select('#crossSelectHuman').attr('visibility', 'hidden');
+          d3.select('#crossSelectComputer').attr('visibility', 'visible');
+          this.cross.player = this.cross.slider.value;
+          this._showSlider(this.cross);
+          d3.select('#AILevel').attr('visibility', 'visible');
+          break;
+        case 'noughtClickHuman':
+          d3.select('#noughtSelectHuman').attr('visibility', 'visible');
+          d3.select('#noughtSelectComputer').attr('visibility', 'hidden');
+          this.nought.player = -1;
+          this._hideSlider(this.nought);
+          if (this.cross.player < 0) {
+            d3.select('#AILevel').attr('visibility', 'hidden');
+          }
+          break;
+        case 'noughtClickComputer':
+          d3.select('#noughtSelectHuman').attr('visibility', 'hidden');
+          d3.select('#noughtSelectComputer').attr('visibility', 'visible');
+          this.nought.player = this.nought.slider.value;
+          this._showSlider(this.nought);
+          d3.select('#AILevel').attr('visibility', 'visible');
+          break;
+        case 'playMessage':
+          this._launchPlay();
+          break;
+        default:
+          console.log(event.toElement.id);
+      }
     }
   }
 
@@ -1239,12 +1255,20 @@ class TicTacToeInterface {
   }
 
   _launchPlay() {
+    this.isPlaying = true;
+    d3.select('#message').html('Stop!');
     // Create the game
-    let game = new TicTacToeGame((w) => {this._endGame(w);});
+    this._game = new TicTacToeGame((w) => {this._endGame(w);});
     // Define players
-    game.crossPlayer = this._definePlayer(this.cross.player, game, 1);
-    game.noughtPlayer = this._definePlayer(this.nought.player, game, -1);
-    game.play((p) => {this._newTurn(p);});
+    this._game.crossPlayer = this._definePlayer(this.cross.player, this._game, 1);
+    this._game.noughtPlayer = this._definePlayer(this.nought.player, this._game, -1);
+    this._game.play((p) => {this._newTurn(p);});
+  }
+
+  _stopPlay() {
+    this.isPlaying = false;
+    d3.select('#message').html('Play!');
+    this._game.stop();
   }
 
   // return a player depending on the playerValue (the level), the game and the sign (1 -> cross, -1 -> nought)
