@@ -1317,43 +1317,6 @@ class TicTacToeInterface {
       d3.select('#crossArrow').attr('visibility', 'hidden');
     }
   }
-
-  // DEBUG
-  _msg(text) {
-    document.getElementById('gameMsg').innerHTML = text;
-  }
-  _drawGrid(svg) {
-    let viewBox = svg.attr('viewBox').split(' ').map(Number),
-      x0 = viewBox[0],
-      x1 = viewBox[0] + viewBox[2],
-      y0 = viewBox[1],
-      y1 = viewBox[1] + viewBox[3];
-    for (let x = x0; x < x1; x++) {
-      svg.append('path')
-        .attr('d', `M${x},${y0} L${x},${y1}`)
-        .attr('stroke', 'cyan')
-        .attr('stroke-width', 0.01);
-      svg.append('text')
-        .text(x)
-        .attr("x", x + 0.1)
-        .attr("y", y0 + 0.2)
-        .attr("font-size", 0.24)
-        .attr("fill", 'cyan');
-    }
-    for (let y = y0; y < y1; y++) {
-      svg.append('path')
-        .attr('d', `M${x0},${y} L${x1},${y}`)
-        .attr('stroke', 'cyan')
-        .attr('stroke-width', 0.01);
-      svg.append('text')
-        .text(y)
-        .attr("x", x0 + 0.1)
-        .attr("y", y - 0.2)
-        .attr("font-size", 0.24)
-        .attr("fill", 'cyan');
-    }
-  }
-
 }
 
 let app = new TicTacToeInterface();
