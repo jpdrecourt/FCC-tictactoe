@@ -1030,6 +1030,15 @@ class TicTacToeInterface {
       .attr('x', '3.0')
       .attr('y', '5.9');
 
+    //AI level
+    this.svg.append('text')
+      .attr('visibility', 'visible')
+      .attr('class', 'uiText')
+      .attr('id', 'AILevel')
+      .text('AI Level')
+      .attr('x', '0')
+      .attr('y', '10.2');
+
     // Message
     this.svg.append('text')
       .attr('class', 'uiText')
@@ -1119,24 +1128,32 @@ class TicTacToeInterface {
         d3.select('#crossSelectComputer').attr('visibility', 'hidden');
         this.cross.player = -1;
         this._hideSlider(this.cross);
+        if (this.nought.player < 0) {
+          d3.select('#AILevel').attr('visibility', 'hidden');
+        }
         break;
       case 'crossClickComputer':
         d3.select('#crossSelectHuman').attr('visibility', 'hidden');
         d3.select('#crossSelectComputer').attr('visibility', 'visible');
         this.cross.player = this.cross.slider.value;
         this._showSlider(this.cross);
+        d3.select('#AILevel').attr('visibility', 'visible');
         break;
       case 'noughtClickHuman':
         d3.select('#noughtSelectHuman').attr('visibility', 'visible');
         d3.select('#noughtSelectComputer').attr('visibility', 'hidden');
         this.nought.player = -1;
         this._hideSlider(this.nought);
+        if (this.cross.player < 0) {
+          d3.select('#AILevel').attr('visibility', 'hidden');
+        }
         break;
       case 'noughtClickComputer':
         d3.select('#noughtSelectHuman').attr('visibility', 'hidden');
         d3.select('#noughtSelectComputer').attr('visibility', 'visible');
         this.nought.player = this.nought.slider.value;
         this._showSlider(this.nought);
+        d3.select('#AILevel').attr('visibility', 'visible');
         break;
       case 'playMessage':
         this._launchPlay();
