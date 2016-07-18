@@ -356,10 +356,12 @@ class TicTacToeBoard {
   }
 
   _enableClick() {
+    console.log('Enable Click')
     this._mask.style.zIndex = '-1';
   }
 
   _disableClick() {
+    console.log('Disable Click')
     this._mask.style.zIndex = '1';
   }
 }
@@ -640,6 +642,7 @@ class TicTacToeGame {
     if (won === '') {
       if (this._isDraw()) {
         this._drawSequence();
+
       } else {
         this._currentPlayer = !this._currentPlayer + 0;
         this._turn(true);
